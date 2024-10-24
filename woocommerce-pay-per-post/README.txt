@@ -4,8 +4,8 @@ Tags: woocommerce, payforpost, pay for post, sell content,
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mattpram%40gmail%2ecom
 Requires at least: 3.8
 Requires PHP: 7.4
-Tested up to: 6.6.1
-Stable tag: 3.1.23
+Tested up to: 6.6.3
+Stable tag: 3.1.24
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -136,6 +136,12 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 
 
 == Changelog ==
+
+=3.2.24=
+* UPDATE - Added in a filter to disable the last_purchase_date on shortcodes which is an expensive operation. wc_pay_per_post_enable_last_purchase_date
+* FEATURE - WooMemberships, WooSubscriptions and PaidMembershipPro now work with Elementor integration.
+* UPDATE - Updated Freemius Library
+
 
 =3.2.23=
 * BUGFIX - Fixed issue with Remaining shortcode not outputting results when used inside of Elementor page.

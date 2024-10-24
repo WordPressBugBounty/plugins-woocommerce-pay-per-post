@@ -44,11 +44,15 @@
 		 * @return bool
 		 * @noinspection PhpUndefinedFunctionInspection
 		 */
-		public function is_member( $post_id = null ): bool {
+		public function is_member( $post_id = null, $product_ids = null ): bool {
 			if ( is_null( $post_id ) ) {
 				$post_id = get_the_ID();
 			}
-			$product_ids  = (array) get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true );
+
+			if(is_null( $product_ids ) ) {
+				$product_ids  = (array) get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true );
+			}
+
 			$current_user = wp_get_current_user();
 
 			foreach ( $product_ids as $id ) {
@@ -71,8 +75,10 @@
 		}
 
 
-		public function post_contains_membership_products( $post_id ): bool {
-			$product_ids = (array) get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true );
+		public function post_contains_membership_products( $post_id, $product_ids = null ): bool {
+			if(is_null($product_ids)){
+				$product_ids = (array) get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true );
+			}
 
 			foreach ( $product_ids as $product_id ) {
 

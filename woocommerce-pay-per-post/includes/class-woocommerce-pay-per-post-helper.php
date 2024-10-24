@@ -391,8 +391,14 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
             //TODO this needs to be updated to newest methods that include Elementor
             $product_ids = get_post_meta( get_the_ID(), WC_PPP_SLUG . '_product_ids', true );
         }
-        $return_content = str_replace( '{{product_id}}', implode( ',', (array) $product_ids ), $paywall_content );
-        $return_content = str_replace( '{{parent_id}}', $parent_id, $return_content );
+        if ( count( (array) $product_ids ) > 0 ) {
+            $return_content = str_replace( '{{product_id}}', implode( ',', (array) $product_ids ), $paywall_content );
+        } else {
+            $return_content = str_replace( '{{product_id}}', reset( $product_ids ), $paywall_content );
+        }
+        if ( !is_null( $parent_id ) ) {
+            $return_content = str_replace( '{{parent_id}}', $parent_id, $return_content );
+        }
         return $return_content;
     }
 
@@ -689,7 +695,7 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
         }
         $last_purchase_date = Carbon::parse( $order_date )->locale( get_user_locale() );
         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Restrict_Content/get_last_purchase_date__premium_only  -Last Purchase Carbon: ' . $last_purchase_date );
-        return $last_purchase_date->format( get_option( 'date_format' ) );
+        return $last_purchase_date;
     }
 
 }

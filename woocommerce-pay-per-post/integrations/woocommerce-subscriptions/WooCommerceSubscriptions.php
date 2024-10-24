@@ -39,8 +39,10 @@
 		}
 
 
-		public function post_contains_subscription_products( $post_id ): bool {
-			$product_ids = (array) get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true );
+		public function post_contains_subscription_products( $post_id, $product_ids = null ): bool {
+			if(is_null( $product_ids ) ) {
+				$product_ids = (array) get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true );
+			}
 
 			foreach ( $product_ids as $product_id ) {
 				if ( $this->is_subscription_product( $product_id ) ) {
@@ -69,14 +71,16 @@
 		 *
 		 * @return bool
 		 */
-		public function is_subscriber( $post_id = null ): bool {
+		public function is_subscriber( $post_id = null, $product_ids = null ): bool {
 			Woocommerce_Pay_Per_Post_Helper::logger( 'Looking to see if user has any active subscriptions' );
 
 			if ( is_null( $post_id ) ) {
 				$post_id = get_the_ID();
 			}
 
-			$product_ids  = get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true );
+			if(is_null($product_ids)){
+				$product_ids  = get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true );
+			}
 			$current_user = wp_get_current_user();
 
 			if ( ! empty( $product_ids ) ):

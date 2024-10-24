@@ -222,9 +222,9 @@
 			$settings = $element->get_settings_for_display();
 
 			if ( isset( $settings[ WC_PPP_SLUG . '_enable' ] ) && 'yes' === $settings[ WC_PPP_SLUG . '_enable' ] ) {
-				foreach ( (array) $settings[ WC_PPP_SLUG . '_select_products' ] as $id ) {
+				//foreach ( (array) $settings[ WC_PPP_SLUG . '_select_products' ] as $product_id ) {
 
-					if ( $this->has_access( $id ) ) {
+					if ( $this->has_access( (array) $settings[ WC_PPP_SLUG . '_select_products' ]  ) ) {
 						$this->show_paywall = false;
 						$should_render = true;
 					} else {
@@ -232,7 +232,7 @@
 
 						$should_render = false;
 					}
-				}
+				//}
 
 			}
 			return $should_render;
@@ -257,13 +257,13 @@
 			}
 
 			if ( $this->show_paywall ) {
+
 				if ( isset( $settings[ WC_PPP_SLUG . '_should_override_message' ] ) && 'yes' === $settings[ WC_PPP_SLUG . '_should_override_message' ] ) {
 					// Output custom Restricted Content message for this element
 					$fallback_content = Woocommerce_Pay_Per_Post_Helper::replace_tokens( $settings[ WC_PPP_SLUG . '_override_message' ], $settings[ WC_PPP_SLUG . '_select_products' ] );
 				} else {
-					$fallback_content = Woocommerce_Pay_Per_Post_Helper::replace_tokens( get_option( WC_PPP_SLUG . '_restricted_content_default', _x( Woocommerce_Pay_Per_Post_Restrict_Content::RESTRICT_CONTENT_DEFAULT_MESSAGE, 'Default restricted content', 'wc_pay_per_post' ) ), $settings[ WC_PPP_SLUG . '_select_products' ] );
+					$fallback_content = Woocommerce_Pay_Per_Post_Helper::replace_tokens( get_option( WC_PPP_SLUG . '_restricted_content_default' ), $settings[ WC_PPP_SLUG . '_select_products' ] );
 				}
-
 				$fallback_markup = $this->fallback_markup( $fallback_content, $element->get_type() );
 			}
 
@@ -326,7 +326,10 @@
 
 		protected function get_products() {
 			if ( is_admin() ) {
-				if ( is_null( $this->products ) ) {
+
+				if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_memberships() ) {
+					$this->products = array_merge( Woocommerce_Pay_Per_Post_Helper::get_products(), $this->generate_membership_levels_dropdown() );
+				} else {
 					$this->products = Woocommerce_Pay_Per_Post_Helper::get_products();
 				}
 
@@ -336,14 +339,31 @@
 			return [];
 		}
 
-		public function has_access( $id ): bool {
 
+		public function generate_membership_levels_dropdown( ): array {
+
+			$membership_levels = wc_memberships_get_membership_plans();
+			$products = [];
+
+			foreach ( $membership_levels as $level ) {
+				$products[] = ['ID' => $level->id, 'post_title' => $level->name];
+			}
+
+			return $products;
+
+		}
+
+
+
+		public function has_access( $product_ids ): bool {
+			$post_id = get_the_ID();
 			$checks = [
 				'check_if_logged_in',
 				'check_if_admin_call',
 				'check_if_purchased',
 				'check_if_admin_user_have_access',
 				'check_if_user_role_has_access',
+				'check_if_post_contains_subscription_products',
 			];
 
 			if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_memberships() ) {
@@ -362,11 +382,14 @@
 
 			//Preform Checks
 			$check_results = [];
-			foreach ( $checks as $check ) {
-				$check_results[ $check ] = Woocommerce_Pay_Per_Post_Protection_Checks::$check( $id );
-			}
 
-//			echo '<pre>'.var_export($check_results, true) . '</pre>';
+
+		//The issue is the protection checks is looking for a post_id where as we are passing the product Id.
+
+
+			foreach ( $checks as $check ) {
+				$check_results[ $check ] = Woocommerce_Pay_Per_Post_Protection_Checks::$check( $post_id, $product_ids );
+			}
 
 			if ( $check_results['check_if_admin_call'] || $check_results['check_if_admin_user_have_access'] || $check_results['check_if_user_role_has_access'] ) {
 				return true;
@@ -376,8 +399,26 @@
 				return true;
 			}
 
+			if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_memberships() ) {
+				if ( $check_results['check_if_post_contains_membership_products'] && $check_results['check_if_is_member'] ) {
+					return true;
+				}
+			}
 
-			return false;
+			if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() ) {
+				if ( $check_results['check_if_post_contains_subscription_products'] && $check_results['check_if_is_subscriber'] ) {
+					return true;
+				}
+			}
+
+			if ( Woocommerce_Pay_Per_Post_Helper::can_use_paid_membership_pro() ) {
+				if ( $check_results['check_if_post_contains_paid_memberships_pro_membership_products'] && $check_results['check_if_is_paid_memberships_pro_member'] ) {
+					return true;
+				}
+			}
+
+
+				return false;
 		}
 
 
