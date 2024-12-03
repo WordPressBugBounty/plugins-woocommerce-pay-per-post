@@ -7,16 +7,13 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
- *
- * Modified by __root__ on 08-August-2024 using Strauss.
- * @see https://github.com/BrianHenryIE/strauss
  */
 
 namespace Pramadillo\PayForPost\Carbon\Cli;
 
 class Invoker
 {
-    public const CLI_CLASS_NAME = 'Pramadillo\PayForPost\Carbon\\Cli';
+    public const CLI_CLASS_NAME = 'Pramadillo\\PayForPost\\Carbon\\Cli';
 
     protected function runWithCli(string $className, array $parameters): bool
     {

@@ -16,13 +16,13 @@
         }
     ],
     "require": {
-        "php": ">=7.1"
+        "php": ">=7.2"
     },
     "provide": {
         "ext-mbstring": "*"
     },
     "autoload": {
-        "psr-4": { "Symfony\\Polyfill\\Mbstring\\": "" },
+        "psr-4": { "Pramadillo\\PayForPost\\Symfony\\Polyfill\\Mbstring\\": "" },
         "files": [ "bootstrap.php" ]
     },
     "suggest": {

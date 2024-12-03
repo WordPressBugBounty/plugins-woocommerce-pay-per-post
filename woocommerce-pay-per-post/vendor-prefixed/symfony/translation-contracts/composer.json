@@ -22,7 +22,7 @@
         "symfony/translation-implementation": ""
     },
     "autoload": {
-        "psr-4": { "Symfony\\Contracts\\Translation\\": "" }
+        "psr-4": { "Pramadillo\\PayForPost\\Symfony\\Contracts\\Translation\\": "" }
     },
     "minimum-stability": "dev",
     "extra": {

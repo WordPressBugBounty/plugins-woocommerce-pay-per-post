@@ -7,13 +7,10 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
- *
- * Modified by __root__ on 08-August-2024 using Strauss.
- * @see https://github.com/BrianHenryIE/strauss
  */
 
-#[Pramadillo_PayForPost_Attribute(Attribute::TARGET_CLASS)]
-final class Pramadillo_PayForPost_Attribute
+#[Attribute(Attribute::TARGET_CLASS)]
+final class Attribute
 {
     public const TARGET_CLASS = 1;
     public const TARGET_FUNCTION = 2;

@@ -20,10 +20,10 @@
         }
     ],
     "require": {
-        "php": ">=7.1"
+        "php": ">=7.2"
     },
     "autoload": {
-        "psr-4": { "Symfony\\Polyfill\\Php80\\": "" },
+        "psr-4": { "Pramadillo\\PayForPost\\Symfony\\Polyfill\\Php80\\": "" },
         "files": [ "bootstrap.php" ],
         "classmap": [ "Resources/stubs" ]
     },

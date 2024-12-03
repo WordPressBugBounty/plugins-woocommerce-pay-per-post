@@ -11,8 +11,8 @@ $ composer require symfony/translation
 ```
 
 ```php
-use Symfony\Component\Translation\Translator;
-use Symfony\Component\Translation\Loader\ArrayLoader;
+use Pramadillo\PayForPost\Symfony\Component\Translation\Translator;
+use Pramadillo\PayForPost\Symfony\Component\Translation\Loader\ArrayLoader;
 
 $translator = new Translator('fr_FR');
 $translator->addLoader('array', new ArrayLoader());

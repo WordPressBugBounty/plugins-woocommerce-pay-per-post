@@ -47,7 +47,7 @@
         "psr/log-implementation": "To use logging capability in translator"
     },
     "autoload": {
-        "psr-4": { "Symfony\\Component\\Translation\\": "" },
+        "psr-4": { "Pramadillo\\PayForPost\\Symfony\\Component\\Translation\\": "" },
         "exclude-from-classmap": [
             "/Tests/"
         ]

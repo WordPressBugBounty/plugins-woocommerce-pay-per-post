@@ -1,6 +1,6 @@
 <?php
 
-namespace Psr\Clock;
+namespace Pramadillo\PayForPost\Psr\Clock;
 
 use DateTimeImmutable;
 

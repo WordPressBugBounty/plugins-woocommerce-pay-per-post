@@ -7,17 +7,14 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
- *
- * Modified by __root__ on 08-August-2024 using Strauss.
- * @see https://github.com/BrianHenryIE/strauss
  */
 
 namespace Pramadillo\PayForPost\Monolog;
 
 use Pramadillo\PayForPost\Monolog\Handler\HandlerInterface;
 use Pramadillo\PayForPost\Monolog\Handler\StreamHandler;
-use Psr\Log\LoggerInterface;
-use Psr\Log\InvalidArgumentException;
+use Pramadillo\PayForPost\Psr\Log\LoggerInterface;
+use Pramadillo\PayForPost\Psr\Log\InvalidArgumentException;
 use Exception;
 
 /**

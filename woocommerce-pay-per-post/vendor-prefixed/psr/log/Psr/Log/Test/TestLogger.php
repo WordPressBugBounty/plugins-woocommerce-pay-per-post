@@ -1,8 +1,8 @@
 <?php
 
-namespace Psr\Log\Test;
+namespace Pramadillo\PayForPost\Psr\Log\Test;
 
-use Psr\Log\AbstractLogger;
+use Pramadillo\PayForPost\Psr\Log\AbstractLogger;
 
 /**
  * Used for testing purposes.

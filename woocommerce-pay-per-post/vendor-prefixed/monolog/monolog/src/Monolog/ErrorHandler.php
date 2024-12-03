@@ -7,15 +7,12 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
- *
- * Modified by __root__ on 08-August-2024 using Strauss.
- * @see https://github.com/BrianHenryIE/strauss
  */
 
 namespace Pramadillo\PayForPost\Monolog;
 
-use Psr\Log\LoggerInterface;
-use Psr\Log\LogLevel;
+use Pramadillo\PayForPost\Psr\Log\LoggerInterface;
+use Pramadillo\PayForPost\Psr\Log\LogLevel;
 use Pramadillo\PayForPost\Monolog\Handler\AbstractHandler;
 
 /**
@@ -63,7 +60,7 @@ class ErrorHandler
     public static function register(LoggerInterface $logger, $errorLevelMap = array(), $exceptionLevel = null, $fatalLevel = null)
     {
         //Forces the autoloader to run for LogLevel. Fixes an autoload issue at compile-time on PHP5.3. See https://github.com/Seldaek/monolog/pull/929
-        class_exists('\\Psr\\Log\\LogLevel', true);
+        class_exists('\\Pramadillo\\PayForPost\\Psr\\Log\\LogLevel', true);
 
         /** @phpstan-ignore-next-line */
         $handler = new static($logger);

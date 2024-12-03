@@ -7,9 +7,6 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
- *
- * Modified by __root__ on 08-August-2024 using Strauss.
- * @see https://github.com/BrianHenryIE/strauss
  */
 
 namespace Pramadillo\PayForPost\Symfony\Polyfill\Mbstring;
@@ -53,6 +50,9 @@ namespace Pramadillo\PayForPost\Symfony\Polyfill\Mbstring;
  * - mb_substr_count         - Count the number of substring occurrences
  * - mb_ucfirst              - Make a string's first character uppercase
  * - mb_lcfirst              - Make a string's first character lowercase
+ * - mb_trim                 - Strip whitespace (or other characters) from the beginning and end of a string
+ * - mb_ltrim                - Strip whitespace (or other characters) from the beginning of a string
+ * - mb_rtrim                - Strip whitespace (or other characters) from the end of a string
  *
  * Not implemented:
  * - mb_convert_kana         - Convert "kana" one from another ("zen-kaku", "han-kaku" and more)
@@ -86,12 +86,6 @@ final class Mbstring
     public static function mb_convert_encoding($s, $toEncoding, $fromEncoding = null)
     {
         if (\is_array($s)) {
-            if (PHP_VERSION_ID < 70200) {
-                trigger_error('mb_convert_encoding() expects parameter 1 to be string, array given', \E_USER_WARNING);
-
-                return null;
-            }
-
             $r = [];
             foreach ($s as $str) {
                 $r[] = self::mb_convert_encoding($str, $toEncoding, $fromEncoding);
@@ -388,7 +382,7 @@ final class Mbstring
             return false;
         }
 
-        throw new \Pramadillo_PayForPost_ValueError(sprintf('Argument #1 ($encoding) must be a valid encoding, "%s" given', $encoding));
+        throw new \ValueError(sprintf('Argument #1 ($encoding) must be a valid encoding, "%s" given', $encoding));
     }
 
     public static function mb_language($lang = null)
@@ -409,7 +403,7 @@ final class Mbstring
             return false;
         }
 
-        throw new \Pramadillo_PayForPost_ValueError(sprintf('Argument #1 ($language) must be a valid language, "%s" given', $lang));
+        throw new \ValueError(sprintf('Argument #1 ($language) must be a valid language, "%s" given', $lang));
     }
 
     public static function mb_list_encodings()
@@ -430,12 +424,6 @@ final class Mbstring
 
     public static function mb_check_encoding($var = null, $encoding = null)
     {
-        if (\PHP_VERSION_ID < 70200 && \is_array($var)) {
-            trigger_error('mb_check_encoding() expects parameter 1 to be string, array given', \E_USER_WARNING);
-
-            return null;
-        }
-
         if (null === $encoding) {
             if (null === $var) {
                 return false;
@@ -597,7 +585,7 @@ final class Mbstring
                 return false;
             }
 
-            throw new \Pramadillo_PayForPost_ValueError('Argument #2 ($length) must be greater than 0');
+            throw new \ValueError('Argument #2 ($length) must be greater than 0');
         }
 
         if (null === $encoding) {
@@ -650,7 +638,7 @@ final class Mbstring
             return false;
         }
 
-        throw new \Pramadillo_PayForPost_ValueError('Argument #1 ($substitute_character) must be "none", "long", "entity" or a valid codepoint');
+        throw new \ValueError('Argument #1 ($substitute_character) must be "none", "long", "entity" or a valid codepoint');
     }
 
     public static function mb_substr($s, $start, $length = null, $encoding = null)
@@ -849,7 +837,7 @@ final class Mbstring
     public static function mb_str_pad(string $string, int $length, string $pad_string = ' ', int $pad_type = \STR_PAD_RIGHT, ?string $encoding = null): string
     {
         if (!\in_array($pad_type, [\STR_PAD_RIGHT, \STR_PAD_LEFT, \STR_PAD_BOTH], true)) {
-            throw new \Pramadillo_PayForPost_ValueError('mb_str_pad(): Argument #4 ($pad_type) must be STR_PAD_LEFT, STR_PAD_RIGHT, or STR_PAD_BOTH');
+            throw new \ValueError('mb_str_pad(): Argument #4 ($pad_type) must be STR_PAD_LEFT, STR_PAD_RIGHT, or STR_PAD_BOTH');
         }
 
         if (null === $encoding) {
@@ -859,7 +847,7 @@ final class Mbstring
         }
 
         if (self::mb_strlen($pad_string, $encoding) <= 0) {
-            throw new \Pramadillo_PayForPost_ValueError('mb_str_pad(): Argument #3 ($pad_string) must be a non-empty string');
+            throw new \ValueError('mb_str_pad(): Argument #3 ($pad_string) must be a non-empty string');
         }
 
         $paddingRequired = $length - self::mb_strlen($string, $encoding);
@@ -983,17 +971,75 @@ final class Mbstring
         return $encoding;
     }
 
+    public static function mb_trim(string $string, ?string $characters = null, ?string $encoding = null): string
+    {
+        return self::mb_internal_trim('{^[%s]+|[%1$s]+$}Du', $string, $characters, $encoding, __FUNCTION__);
+    }
+
+    public static function mb_ltrim(string $string, ?string $characters = null, ?string $encoding = null): string
+    {
+        return self::mb_internal_trim('{^[%s]+}Du', $string, $characters, $encoding, __FUNCTION__);
+    }
+
+    public static function mb_rtrim(string $string, ?string $characters = null, ?string $encoding = null): string
+    {
+        return self::mb_internal_trim('{[%s]+$}D', $string, $characters, $encoding, __FUNCTION__);
+    }
+
+    private static function mb_internal_trim(string $regex, string $string, ?string $characters, ?string $encoding, string $function): string
+    {
+        if (null === $encoding) {
+            $encoding = self::mb_internal_encoding();
+        } else {
+            self::assertEncoding($encoding, $function.'(): Argument #3 ($encoding) must be a valid encoding, "%s" given');
+        }
+
+        if ('' === $characters) {
+            return null === $encoding ? $string : self::mb_convert_encoding($string, $encoding);
+        }
+
+        if ('UTF-8' === $encoding) {
+            $encoding = null;
+            if (!preg_match('//u', $string)) {
+                $string = @iconv('UTF-8', 'UTF-8//IGNORE', $string);
+            }
+            if (null !== $characters && !preg_match('//u', $characters)) {
+                $characters = @iconv('UTF-8', 'UTF-8//IGNORE', $characters);
+            }
+        } else {
+            $string = iconv($encoding, 'UTF-8//IGNORE', $string);
+
+            if (null !== $characters) {
+                $characters = iconv($encoding, 'UTF-8//IGNORE', $characters);
+            }
+        }
+
+        if (null === $characters) {
+            $characters = "\\0 \f\n\r\t\v\u{00A0}\u{1680}\u{2000}\u{2001}\u{2002}\u{2003}\u{2004}\u{2005}\u{2006}\u{2007}\u{2008}\u{2009}\u{200A}\u{2028}\u{2029}\u{202F}\u{205F}\u{3000}\u{0085}\u{180E}";
+        } else {
+            $characters = preg_quote($characters);
+        }
+
+        $string = preg_replace(sprintf($regex, $characters), '', $string);
+
+        if (null === $encoding) {
+            return $string;
+        }
+
+        return iconv('UTF-8', $encoding.'//IGNORE', $string);
+    }
+
     private static function assertEncoding(string $encoding, string $errorFormat): void
     {
         try {
             $validEncoding = @self::mb_check_encoding('', $encoding);
-        } catch (\Pramadillo_PayForPost_ValueError $e) {
-            throw new \ValueError(\sprintf($errorFormat, $encoding));
+        } catch (\ValueError $e) {
+            throw new \ValueError(sprintf($errorFormat, $encoding));
         }
 
         // BC for PHP 7.3 and lower
         if (!$validEncoding) {
-            throw new \Pramadillo_PayForPost_ValueError(\sprintf($errorFormat, $encoding));
+            throw new \ValueError(sprintf($errorFormat, $encoding));
         }
     }
 }

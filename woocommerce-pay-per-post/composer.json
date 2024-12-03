@@ -14,6 +14,17 @@
     "scripts": {
         "strauss": [
             "@php strauss.phar"
+        ],
+        "prefix-namespaces": [
+            "sh -c 'test -f ./bin/strauss.phar || curl -o bin/strauss.phar -L -C - https://github.com/BrianHenryIE/strauss/releases/latest/download/strauss.phar'",
+            "@php bin/strauss.phar",
+            "@php composer dump-autoload"
+        ],
+        "post-install-cmd": [
+            "@prefix-namespaces"
+        ],
+        "post-update-cmd": [
+            "@prefix-namespaces"
         ]
     },
     "extra": {

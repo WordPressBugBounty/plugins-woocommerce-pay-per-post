@@ -1,6 +1,6 @@
 <?php
 
-namespace Psr\Log;
+namespace Pramadillo\PayForPost\Psr\Log;
 
 /**
  * Describes a logger instance.
@@ -119,7 +119,7 @@ interface LoggerInterface
      *
      * @return void
      *
-     * @throws \Psr\Log\InvalidArgumentException
+     * @throws \Pramadillo\PayForPost\Psr\Log\InvalidArgumentException
      */
     public function log($level, $message, array $context = array());
 }

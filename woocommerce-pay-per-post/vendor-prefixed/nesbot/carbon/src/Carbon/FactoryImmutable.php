@@ -7,9 +7,6 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
- *
- * Modified by __root__ on 08-August-2024 using Strauss.
- * @see https://github.com/BrianHenryIE/strauss
  */
 
 namespace Pramadillo\PayForPost\Carbon;
@@ -17,7 +14,7 @@ namespace Pramadillo\PayForPost\Carbon;
 use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
-use Psr\Clock\ClockInterface;
+use Pramadillo\PayForPost\Psr\Clock\ClockInterface;
 
 /**
  * A factory to generate CarbonImmutable instances with common settings.

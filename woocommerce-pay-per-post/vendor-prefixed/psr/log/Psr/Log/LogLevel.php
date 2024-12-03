@@ -1,6 +1,6 @@
 <?php
 
-namespace Psr\Log;
+namespace Pramadillo\PayForPost\Psr\Log;
 
 /**
  * Describes log levels.

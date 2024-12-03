@@ -7,9 +7,6 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
- *
- * Modified by __root__ on 08-August-2024 using Strauss.
- * @see https://github.com/BrianHenryIE/strauss
  */
 
 namespace Pramadillo\PayForPost\Monolog;
@@ -23,8 +20,8 @@ use InvalidArgumentException;
  * via static method calls on this class.
  *
  * <code>
- * $application = new Pramadillo\PayForPost\Monolog\Logger('application');
- * $api = new Pramadillo\PayForPost\Monolog\Logger('api');
+ * $application = new \Pramadillo\PayForPost\Monolog\Logger('application');
+ * $api = new \Pramadillo\PayForPost\Monolog\Logger('api');
  *
  * Monolog\Registry::addLogger($application);
  * Monolog\Registry::addLogger($api);

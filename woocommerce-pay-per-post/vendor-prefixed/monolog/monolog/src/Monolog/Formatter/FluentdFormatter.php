@@ -7,9 +7,6 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
- *
- * Modified by __root__ on 08-August-2024 using Strauss.
- * @see https://github.com/BrianHenryIE/strauss
  */
 
 namespace Pramadillo\PayForPost\Monolog\Formatter;
@@ -30,9 +27,9 @@ use Pramadillo\PayForPost\Monolog\Utils;
  *
  * Monolog setup:
  *
- * $logger = new Pramadillo\PayForPost\Monolog\Logger('fluent.tag');
- * $fluentHandler = new Pramadillo\PayForPost\Monolog\Handler\SocketHandler('unix:///var/run/td-agent/td-agent.sock');
- * $fluentHandler->setFormatter(new Pramadillo\PayForPost\Monolog\Formatter\FluentdFormatter());
+ * $logger = new \Pramadillo\PayForPost\Monolog\Logger('fluent.tag');
+ * $fluentHandler = new \Pramadillo\PayForPost\Monolog\Handler\SocketHandler('unix:///var/run/td-agent/td-agent.sock');
+ * $fluentHandler->setFormatter(new \Pramadillo\PayForPost\Monolog\Formatter\FluentdFormatter());
  * $logger->pushHandler($fluentHandler);
  *
  * @author Andrius Putna <fordnox@gmail.com>

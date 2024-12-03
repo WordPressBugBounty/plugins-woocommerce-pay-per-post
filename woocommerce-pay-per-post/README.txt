@@ -4,8 +4,8 @@ Tags: woocommerce, payforpost, pay for post, sell content,
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mattpram%40gmail%2ecom
 Requires at least: 3.8
 Requires PHP: 7.4
-Tested up to: 6.6.3
-Stable tag: 3.1.24
+Tested up to: 6.7.1
+Stable tag: 3.1.26
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -136,6 +136,13 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 
 
 == Changelog ==
+
+=3.2.26=
+* UPDATE - Added additional parameters when creating transients to account for missing attributes.
+* UPDATE - Updated all third-party libraries
+
+=3.2.25=
+*UPDATE - Added in new filter for wc_pay_per_post_enable_pageview_fix which when protected pages view page view protection and setting amount to 1 causes issues on some installs.
 
 =3.2.24=
 * UPDATE - Added in a filter to disable the last_purchase_date on shortcodes which is an expensive operation. wc_pay_per_post_enable_last_purchase_date
