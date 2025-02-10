@@ -127,31 +127,38 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
     }
 
     public function check_if_purchased() : bool {
-        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased  - Called. - BACKTRACE - Called From - ' . print_r( debug_backtrace()[1]['function'], true ) );
-        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased  - Products associated with page = ' . print_r( $this->product_ids['product_ids'], true ) );
-        if ( empty( $this->product_ids['product_ids'] ) ) {
-            $this->product_ids['product_ids'] = [];
-        }
+        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - Called.' );
+        // Log associated products
+        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - Products associated with page = ' . print_r( $this->product_ids['product_ids'] ?? [], true ) );
+        // Merge section product IDs if they exist
+        $product_ids = (array) $this->product_ids['product_ids'] ?? [];
         if ( !empty( $this->product_ids['section_product_ids'] ) ) {
-            $this->product_ids['product_ids'] = array_merge( $this->product_ids['product_ids'], $this->product_ids['section_product_ids'] );
+            $product_ids = array_merge( $product_ids, $this->product_ids['section_product_ids'] );
         }
-        if ( !empty( $this->product_ids['product_ids'] ) && count( (array) $this->product_ids['product_ids'] ) > 0 ) {
-            foreach ( $this->product_ids['product_ids'] as $id ) {
-                Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased  - Checking to see if user has purchased product #' . print_r( $id, true ) );
-                if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && $this->integrations['woocommerce-subscriptions']->is_subscription_product( $id ) ) {
-                    if ( wc_customer_bought_product( $this->current_user->user_email, $this->current_user->ID, trim( $id ) ) && $this->check_if_is_subscriber() ) {
-                        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased  - User has purchased product id #' . trim( $id ) );
-                        return true;
-                    }
-                } else {
-                    if ( wc_customer_bought_product( $this->current_user->user_email, $this->current_user->ID, trim( $id ) ) ) {
-                        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased  - User has purchased product id #' . trim( $id ) );
-                        return true;
-                    }
-                }
-                Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased  - User has NOT purchased product id #' . trim( $id ) );
+        // If there are no product IDs, return false
+        if ( empty( $product_ids ) ) {
+            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - No products found for this page.' );
+            return false;
+        }
+        // Loop through product IDs to check ownership
+        foreach ( $product_ids as $id ) {
+            $id = trim( $id );
+            // ID sanitization
+            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - Checking product ID: ' . $id );
+            // Check for subscription product and purchase
+            if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && $this->integrations['woocommerce-subscriptions']->is_subscription_product( $id ) && Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $this->current_user->ID, $id ) && $this->check_if_is_subscriber() ) {
+                Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - User has purchased subscription product ID: ' . $id );
+                return true;
             }
+            // Check for regular product purchase
+            if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $this->current_user->ID, $id ) ) {
+                Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - User has purchased product ID: ' . $id );
+                return true;
+            }
+            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - User has NOT purchased product ID: ' . $id );
         }
+        // If no purchases are found
+        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - User has not purchased any associated products.' );
         return false;
     }
 

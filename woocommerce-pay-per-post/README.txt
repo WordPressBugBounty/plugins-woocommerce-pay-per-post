@@ -5,7 +5,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mattp
 Requires at least: 3.8
 Requires PHP: 7.4
 Tested up to: 6.7.1
-Stable tag: 3.1.26
+Stable tag: 3.1.28
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -136,6 +136,13 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 
 
 == Changelog ==
+
+=3.2.28=
+* UPDATE - Updated all 3rd party vendor libraries
+* UPDATE - Added custom function for wc_customer_bought_product() since that function is broke in WooCommerce version 9.6, 9.6.1, and 9.7.0-pre-release
+
+=3.2.27=
+* BUGFIX - Fixed fatal error on some Elementor integrations.
 
 =3.2.26=
 * UPDATE - Added additional parameters when creating transients to account for missing attributes.
@@ -777,4 +784,4 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 * Initial Release
 
 == Upgrade Notice ==
-Updated libraries and fixed a couple bugs.
+Updated libraries and new custom function to account for WooCommerce 9.6+ function wc_customer_bought_product() no longer working.

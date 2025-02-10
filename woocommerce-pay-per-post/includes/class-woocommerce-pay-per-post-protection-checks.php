@@ -37,12 +37,12 @@ class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Pos
         foreach ( $product_ids as $id ) {
             if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() ) {
                 $subscriptions = new WooCommerceSubscriptions();
-                if ( wc_customer_bought_product( $current_user->user_email, $current_user->ID, trim( $id ) ) && !$subscriptions->is_subscription_product( $id ) ) {
+                if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $current_user->ID, trim( $id ) ) && !$subscriptions->is_subscription_product( $id ) ) {
                     Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_purchased  - WooSubscriptions Enabled and User has purchased product id #' . trim( $id ) . ' that is NOT a subscription product' );
                     return true;
                 }
             } else {
-                if ( wc_customer_bought_product( $current_user->user_email, $current_user->ID, trim( $id ) ) ) {
+                if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $current_user->ID, trim( $id ) ) ) {
                     Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_purchased  - User has purchased product id #' . trim( $id ) );
                     return true;
                 }
@@ -106,28 +106,43 @@ class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Pos
     }
 
     public static function check_if_post_contains_subscription_products( $post_id, $product_ids ) : bool {
-        $subscriptions = new WooCommerceSubscriptions();
-        return $subscriptions->post_contains_subscription_products( $post_id, $product_ids );
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() ) {
+            $subscriptions = new WooCommerceSubscriptions();
+            return $subscriptions->post_contains_subscription_products( $post_id, $product_ids );
+        }
+        return false;
     }
 
     public static function check_if_product_is_a_subscription_product( $id ) : bool {
-        return WC_Subscriptions_Product::is_subscription( $id );
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() ) {
+            return WC_Subscriptions_Product::is_subscription( $id );
+        }
+        return false;
     }
 
     public static function check_if_product_is_a_membership_product( $id ) : bool {
-        return array_key_exists( (int) $id, wc_memberships_get_membership_plans() );
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_memberships() ) {
+            return array_key_exists( (int) $id, wc_memberships_get_membership_plans() );
+        }
+        return false;
     }
 
     public static function check_if_post_contains_membership_products( $id, $product_ids ) : bool {
-        $memberships = new WooCommerceMemberships();
-        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_post_contains_membership_products  - Does Post Contain Membership Products? - ' . (( $memberships->post_contains_membership_products( $id ) ? 'true' : 'false' )) );
-        return $memberships->post_contains_membership_products( $id, $product_ids );
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_memberships() ) {
+            $memberships = new WooCommerceMemberships();
+            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_post_contains_membership_products  - Does Post Contain Membership Products? - ' . (( $memberships->post_contains_membership_products( $id ) ? 'true' : 'false' )) );
+            return $memberships->post_contains_membership_products( $id, $product_ids );
+        }
+        return false;
     }
 
     public static function check_if_post_contains_paid_memberships_pro_membership_products( $post_id, $product_ids ) : bool {
-        $pmp = new PaidMembershipsPro();
-        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_post_contains_paid_memberships_pro_membership_products  - Does Post Contain Paid Membership Pro Membership Products? - ' . (( $pmp->post_contains_membership_products( $id ) ? 'true' : 'false' )) );
-        return $pmp->post_contains_membership_products( $post_id, $product_ids );
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_paid_membership_pro() ) {
+            $pmp = new PaidMembershipsPro();
+            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_post_contains_paid_memberships_pro_membership_products  - Does Post Contain Paid Membership Pro Membership Products? - ' . (( $pmp->post_contains_membership_products( $id ) ? 'true' : 'false' )) );
+            return $pmp->post_contains_membership_products( $post_id, $product_ids );
+        }
+        return false;
     }
 
 }
