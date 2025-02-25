@@ -146,12 +146,12 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
             // ID sanitization
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - Checking product ID: ' . $id );
             // Check for subscription product and purchase
-            if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && $this->integrations['woocommerce-subscriptions']->is_subscription_product( $id ) && Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $this->current_user->ID, $id ) && $this->check_if_is_subscriber() ) {
+            if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && $this->integrations['woocommerce-subscriptions']->is_subscription_product( $id ) && Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $this->current_user->user_email, $this->current_user->ID, $id ) && $this->check_if_is_subscriber() ) {
                 Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - User has purchased subscription product ID: ' . $id );
                 return true;
             }
             // Check for regular product purchase
-            if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $this->current_user->ID, $id ) ) {
+            if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $this->current_user->user_email, $this->current_user->ID, $id ) ) {
                 Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - User has purchased product ID: ' . $id );
                 return true;
             }

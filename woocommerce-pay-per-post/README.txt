@@ -5,7 +5,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mattp
 Requires at least: 3.8
 Requires PHP: 7.4
 Tested up to: 6.7.1
-Stable tag: 3.1.28
+Stable tag: 3.1.29
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -136,6 +136,9 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 
 
 == Changelog ==
+
+=3.2.29=
+* UPDATE - Reverted custom function of customer_has_purchased_product() and conditionalized it to only be used on WC 9.6.0 and 9.6.1 and to use the native wc_customer_bought_product() otherwise, now that WC has fixed the bug in 9.6
 
 =3.2.28=
 * UPDATE - Updated all 3rd party vendor libraries

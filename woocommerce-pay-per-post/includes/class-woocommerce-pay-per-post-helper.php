@@ -698,10 +698,15 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
         return $last_purchase_date;
     }
 
-    public static function customer_has_purchased_product( $user_id, $product_id_or_variation_id ) {
+    public static function customer_has_purchased_product( $user_email, $user_id, $product_id_or_variation_id ) {
         if ( empty( $product_id_or_variation_id ) || empty( $user_id ) ) {
             return false;
         }
+        // Use WooCommerce's built-in function for versions outside 9.6.0 - 9.6.1
+        if ( !defined( 'WC_VERSION' ) || version_compare( WC_VERSION, '9.6.0', '<' ) || version_compare( WC_VERSION, '9.6.1', '>' ) ) {
+            return wc_customer_bought_product( $user_email, $user_id, $product_id_or_variation_id );
+        }
+        // If WooCommerce is specifically 9.6.0 or 9.6.1, use custom SQL query
         global $wpdb;
         $user_id = absint( $user_id );
         $product_id_or_variation_id = absint( $product_id_or_variation_id );
@@ -713,14 +718,14 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
             // HOPS enabled - Query modern order tables
             $order_table = \Automattic\WooCommerce\Internal\DataStores\Orders\OrdersTableDataStore::get_orders_table_name();
             $query = $wpdb->prepare(
-                "\n\t\t\tSELECT COUNT(*)\n\t\t\tFROM {$wpdb->prefix}wc_order_product_lookup\n\t\t\tLEFT JOIN {$order_table} AS orders ON orders.id={$wpdb->prefix}wc_order_product_lookup.order_id\n\t\t\tLEFT JOIN {$wpdb->prefix}wc_customer_lookup ON {$wpdb->prefix}wc_customer_lookup.customer_id={$wpdb->prefix}wc_order_product_lookup.customer_id\n\t\t\tWHERE \n\t\t\t{$wpdb->prefix}wc_customer_lookup.user_id= %d \n\t\t\tAND ({$wpdb->prefix}wc_order_product_lookup.product_id = %d OR {$wpdb->prefix}wc_order_product_lookup.variation_id = %d)\n            AND orders.status IN ({$status_sql})\n\t\t\t",
+                "\n        SELECT COUNT(*)\n        FROM {$wpdb->prefix}wc_order_product_lookup\n        LEFT JOIN {$order_table} AS orders ON orders.id={$wpdb->prefix}wc_order_product_lookup.order_id\n        LEFT JOIN {$wpdb->prefix}wc_customer_lookup ON {$wpdb->prefix}wc_customer_lookup.customer_id={$wpdb->prefix}wc_order_product_lookup.customer_id\n        WHERE \n        {$wpdb->prefix}wc_customer_lookup.user_id= %d \n        AND ({$wpdb->prefix}wc_order_product_lookup.product_id = %d OR {$wpdb->prefix}wc_order_product_lookup.variation_id = %d)\n        AND orders.status IN ({$status_sql})\n        ",
                 $user_id,
                 $product_id_or_variation_id,
                 $product_id_or_variation_id
             );
         } else {
             // Legacy WooCommerce - Query posts/meta tables
-            $query = $wpdb->prepare( "\n            SELECT COUNT(*) \n            FROM {$wpdb->prefix}posts AS orders\n            INNER JOIN {$wpdb->prefix}postmeta AS meta ON orders.ID = meta.post_id\n            INNER JOIN {$wpdb->prefix}woocommerce_order_items AS items ON orders.ID = items.order_id\n            INNER JOIN {$wpdb->prefix}woocommerce_order_itemmeta AS itemmeta ON items.order_item_id = itemmeta.order_item_id\n            WHERE orders.post_type = 'shop_order'\n            AND orders.post_status IN ({$status_sql})\n            AND meta.meta_key = '_customer_user'\n            AND meta.meta_value = %d\n            AND (\n                itemmeta.meta_key IN ('_product_id', '_variation_id')\n                AND itemmeta.meta_value = %d\n            )\n        ", $user_id, $product_id_or_variation_id );
+            $query = $wpdb->prepare( "\n        SELECT COUNT(*) \n        FROM {$wpdb->prefix}posts AS orders\n        INNER JOIN {$wpdb->prefix}postmeta AS meta ON orders.ID = meta.post_id\n        INNER JOIN {$wpdb->prefix}woocommerce_order_items AS items ON orders.ID = items.order_id\n        INNER JOIN {$wpdb->prefix}woocommerce_order_itemmeta AS itemmeta ON items.order_item_id = itemmeta.order_item_id\n        WHERE orders.post_type = 'shop_order'\n        AND orders.post_status IN ({$status_sql})\n        AND meta.meta_key = '_customer_user'\n        AND meta.meta_value = %d\n        AND (\n            itemmeta.meta_key IN ('_product_id', '_variation_id')\n            AND itemmeta.meta_value = %d\n        )\n        ", $user_id, $product_id_or_variation_id );
         }
         return $wpdb->get_var( $query ) > 0;
     }

@@ -1,0 +1,9 @@
+# Created by .ignore support plugin (hsz.mobi)
+/vendor/
+/.idea/
+/freemius/
+/lib/
+/strauss.phar
+/vendor-prefixed/
+bin/strauss.phar
+

@@ -37,12 +37,12 @@ class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Pos
         foreach ( $product_ids as $id ) {
             if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() ) {
                 $subscriptions = new WooCommerceSubscriptions();
-                if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $current_user->ID, trim( $id ) ) && !$subscriptions->is_subscription_product( $id ) ) {
+                if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $current_user->user_email, $current_user->ID, trim( $id ) ) && !$subscriptions->is_subscription_product( $id ) ) {
                     Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_purchased  - WooSubscriptions Enabled and User has purchased product id #' . trim( $id ) . ' that is NOT a subscription product' );
                     return true;
                 }
             } else {
-                if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $current_user->ID, trim( $id ) ) ) {
+                if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $current_user->user_email, $current_user->ID, trim( $id ) ) ) {
                     Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_purchased  - User has purchased product id #' . trim( $id ) );
                     return true;
                 }
