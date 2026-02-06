@@ -10,7 +10,7 @@ if ( wcppp_freemius()->is_not_paying() && !wcppp_freemius()->is_trial() ) {
 ?>
 
 	<?php 
-if ( $_GET['page'] == 'wc_pay_per_post-debug' ) {
+if ( isset( $_GET['page'] ) && $_GET['page'] === 'wc_pay_per_post-debug' ) {
     ?>
 	<?php 
     require_once plugin_dir_path( __FILE__ ) . 'debug-sidebar.php';
@@ -39,7 +39,7 @@ esc_attr_e( 'Request a Feature', 'wc_pay_per_post' );
             </ul>
 
             <?php 
-if ( $_GET['page'] == 'wc_pay_per_post-settings' ) {
+if ( isset( $_GET['page'] ) && $_GET['page'] === 'wc_pay_per_post-settings' ) {
     ?>
             <h3><?php 
     esc_attr_e( 'Additional Help', 'wc_pay_per_post' );

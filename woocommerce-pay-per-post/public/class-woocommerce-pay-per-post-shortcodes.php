@@ -85,9 +85,6 @@ class Woocommerce_Pay_Per_Post_Shortcodes {
             foreach ( $ppp_posts as $post ) {
                 if ( Woocommerce_Pay_Per_Post_Helper::has_purchased( $post->ID, false ) ) {
                     Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - SHORTCODE: Woocommerce_Pay_Per_Post_Shortcodes/shortcode_purchased() checking if ' . $post->ID . ' has been purchased.  HAS BEEN PURCHASED' );
-                    if ( apply_filters( 'wc_pay_per_post_enable_last_purchase_date', true ) ) {
-                        $post->{"last_purchase_date"} = Woocommerce_Pay_Per_Post_Helper::get_last_purchase_date( $post->ID );
-                    }
                     /** @noinspection PhpArrayWriteIsNotUsedInspection */
                     $purchased[] = $post;
                 } else {

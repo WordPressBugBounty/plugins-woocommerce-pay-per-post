@@ -1,8 +1,5 @@
 <?php
 
-use PRAMADILLO\INTEGRATIONS\PaidMembershipsPro;
-use PRAMADILLO\INTEGRATIONS\WooCommerceMemberships;
-use PRAMADILLO\INTEGRATIONS\WooCommerceSubscriptions;
 class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Post {
     public static function check_if_admin_call( $post_id, $product_ids ) : bool {
         $post_id_str = 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_admin_call  - IS ';
@@ -35,8 +32,8 @@ class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Pos
     public static function check_if_purchased( $post_id, $product_ids ) : bool {
         $current_user = wp_get_current_user();
         foreach ( $product_ids as $id ) {
-            if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() ) {
-                $subscriptions = new WooCommerceSubscriptions();
+            if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\WooCommerceSubscriptions' ) ) {
+                $subscriptions = new \PRAMADILLO\INTEGRATIONS\WooCommerceSubscriptions();
                 if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $current_user->user_email, $current_user->ID, trim( $id ) ) && !$subscriptions->is_subscription_product( $id ) ) {
                     Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_purchased  - WooSubscriptions Enabled and User has purchased product id #' . trim( $id ) . ' that is NOT a subscription product' );
                     return true;
@@ -80,8 +77,8 @@ class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Pos
 
     public static function check_if_is_paid_memberships_pro_member( $post_id, $product_ids ) : bool {
         //Is user a Paid Memberships Pro Member?
-        if ( Woocommerce_Pay_Per_Post_Helper::can_use_paid_membership_pro() ) {
-            $pmp = new PaidMembershipsPro();
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_paid_membership_pro() && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\PaidMembershipsPro' ) ) {
+            $pmp = new \PRAMADILLO\INTEGRATIONS\PaidMembershipsPro();
             return $pmp->is_member( $post_id, $product_ids );
         }
         return false;
@@ -89,8 +86,8 @@ class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Pos
 
     public static function check_if_is_member( $post_id = null, $product_ids = null ) : bool {
         //Is user a WooCommerce Memberships Member?
-        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_memberships() ) {
-            $memberships = new WooCommerceMemberships();
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_memberships() && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\WooCommerceMemberships' ) ) {
+            $memberships = new \PRAMADILLO\INTEGRATIONS\WooCommerceMemberships();
             return $memberships->is_member( $post_id, $product_ids );
         }
         return false;
@@ -98,16 +95,16 @@ class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Pos
 
     public static function check_if_is_subscriber( $post_id = null, $product_ids = null ) : bool {
         //Is user a WooCommerce Subscriptions Subscriber?
-        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() ) {
-            $subscriptions = new WooCommerceSubscriptions();
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\WooCommerceSubscriptions' ) ) {
+            $subscriptions = new \PRAMADILLO\INTEGRATIONS\WooCommerceSubscriptions();
             return $subscriptions->is_subscriber( $post_id, $product_ids );
         }
         return false;
     }
 
     public static function check_if_post_contains_subscription_products( $post_id, $product_ids ) : bool {
-        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() ) {
-            $subscriptions = new WooCommerceSubscriptions();
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\WooCommerceSubscriptions' ) ) {
+            $subscriptions = new \PRAMADILLO\INTEGRATIONS\WooCommerceSubscriptions();
             return $subscriptions->post_contains_subscription_products( $post_id, $product_ids );
         }
         return false;
@@ -128,8 +125,8 @@ class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Pos
     }
 
     public static function check_if_post_contains_membership_products( $id, $product_ids ) : bool {
-        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_memberships() ) {
-            $memberships = new WooCommerceMemberships();
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_memberships() && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\WooCommerceMemberships' ) ) {
+            $memberships = new \PRAMADILLO\INTEGRATIONS\WooCommerceMemberships();
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_post_contains_membership_products  - Does Post Contain Membership Products? - ' . (( $memberships->post_contains_membership_products( $id ) ? 'true' : 'false' )) );
             return $memberships->post_contains_membership_products( $id, $product_ids );
         }
@@ -137,8 +134,8 @@ class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Pos
     }
 
     public static function check_if_post_contains_paid_memberships_pro_membership_products( $post_id, $product_ids ) : bool {
-        if ( Woocommerce_Pay_Per_Post_Helper::can_use_paid_membership_pro() ) {
-            $pmp = new PaidMembershipsPro();
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_paid_membership_pro() && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\PaidMembershipsPro' ) ) {
+            $pmp = new \PRAMADILLO\INTEGRATIONS\PaidMembershipsPro();
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_post_contains_paid_memberships_pro_membership_products  - Does Post Contain Paid Membership Pro Membership Products? - ' . (( $pmp->post_contains_membership_products( $id ) ? 'true' : 'false' )) );
             return $pmp->post_contains_membership_products( $post_id, $product_ids );
         }

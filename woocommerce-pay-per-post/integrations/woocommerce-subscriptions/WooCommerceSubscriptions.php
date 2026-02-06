@@ -31,6 +31,9 @@
 		 * @return bool
 		 */
 		public function is_subscription_product( $product_id ): bool {
+			if ( ! class_exists( 'WC_Subscriptions_Product' ) ) {
+				return false;
+			}
 			if ( WC_Subscriptions_Product::is_subscription( $product_id ) ) {
 				return true;
 			}
@@ -56,6 +59,10 @@
 
 		/** @noinspection PhpUnused */
 		public function filter_subscription_products( $products ): array {
+			if ( ! class_exists( 'WC_Subscriptions_Product' ) ) {
+				return $products;
+			}
+
 			$return = [];
 			foreach ( $products as $product ) {
 				if ( ! WC_Subscriptions_Product::is_subscription( $product['ID'] ) ) {
@@ -72,6 +79,10 @@
 		 * @return bool
 		 */
 		public function is_subscriber( $post_id = null, $product_ids = null ): bool {
+			if ( ! function_exists( 'wcs_user_has_subscription' ) ) {
+				return false;
+			}
+
 			Woocommerce_Pay_Per_Post_Helper::logger( 'Looking to see if user has any active subscriptions' );
 
 			if ( is_null( $post_id ) ) {

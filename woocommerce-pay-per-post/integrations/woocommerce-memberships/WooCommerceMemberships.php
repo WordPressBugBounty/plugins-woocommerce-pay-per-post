@@ -7,6 +7,9 @@ use Woocommerce_Pay_Per_Post_Helper;
 class WooCommerceMemberships {
 
 	public function get_membership_levels() {
+		if ( ! function_exists( 'wc_memberships_get_membership_plans' ) ) {
+			return [];
+		}
 		/** @noinspection PhpUndefinedFunctionInspection */
 		return wc_memberships_get_membership_plans();
 
@@ -14,10 +17,19 @@ class WooCommerceMemberships {
 
 	/** @noinspection PhpUnused */
 	public function generate_membership_levels_dropdown( $selected = [] ): string {
+		if ( ! function_exists( 'wc_memberships_get_membership_plans' ) ) {
+			return '';
+		}
+
 		$selected  = empty( $selected ) ? [] : $selected;
 		$drop_down = '';
 		/** @noinspection PhpUndefinedFunctionInspection */
 		$membership_levels = wc_memberships_get_membership_plans();
+
+		if ( empty( $membership_levels ) || ! is_array( $membership_levels ) ) {
+			return '';
+		}
+
 		$drop_down         .= '<optgroup label="Membership Levels">';
 
 		foreach ( $membership_levels as $level ) {
@@ -42,6 +54,10 @@ class WooCommerceMemberships {
 	 * @return bool
 	 */
 	public function is_member( $post_id = null, $product_ids = null ): bool {
+		if ( ! function_exists( 'wc_memberships_is_user_active_member' ) ) {
+			return false;
+		}
+
 		if ( is_null( $post_id ) ) {
 			$post_id = get_the_ID();
 		}
@@ -79,9 +95,15 @@ class WooCommerceMemberships {
 			$product_ids = (array) get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true );
 		}
 
+		$membership_levels = $this->get_membership_levels();
+
+		if ( empty( $membership_levels ) || ! is_array( $membership_levels ) ) {
+			return false;
+		}
+
 		foreach ( $product_ids as $product_id ) {
 			if ( ( $product_id ) ) {
-				if ( array_key_exists( (int) $product_id, $this->get_membership_levels() ) ) {
+				if ( array_key_exists( (int) $product_id, $membership_levels ) ) {
 					return true;
 				}
 			}

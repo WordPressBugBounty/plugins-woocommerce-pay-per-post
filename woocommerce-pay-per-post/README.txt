@@ -4,12 +4,12 @@ Tags: woocommerce, payforpost, pay for post, sell content,
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mattpram%40gmail%2ecom
 Requires at least: 3.8
 Requires PHP: 7.4
-Tested up to: 6.7.1
-Stable tag: 3.1.29
+Tested up to: 6.9.0
+Stable tag: 3.2.33
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Sell Pages/Posts through WooCommerce 2.6+ quickly and easily. Tested up to WooCommerce Version 9.1.x
+Sell Pages/Posts through WooCommerce 2.6+ quickly and easily. Tested up to WooCommerce Version 10.4.x
 
 == Description ==
 Quickly and easily sell access to pages, posts and custom post types through WooCommerce with Pay For Post with WooCommerce.  I originally created this plugin because I looked everywhere, and I couldn't find a plugin already out there, free or premium, that would do the simple fact of selling access to a particular page or post through WooCommerce.  So I decided to write my own.
@@ -136,6 +136,30 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 
 
 == Changelog ==
+
+=3.2.33=
+* BUG FIX - Fixed fatal error when using the purchased content shortcode on free version of the plugin.
+
+=3.2.32=
+* SECURITY - Hardened against XSS attacks.
+* BUG FIX (PREMIUM) - Fixed issue where canceled WooCommerce Subscriptions sometimes still granted access to protected content.
+* BUG FIX (PREMIUM) - Fixed My Account "Purchased Content" endpoint displaying blank page when shortcode display options were saved with no selections. The endpoint now defaults to showing both "has access" and "purchased" sections when no specific selections are made, preventing empty display. Also improved admin settings UI to clarify default behavior.
+* ENHANCEMENT (PREMIUM) - Added show_status_classes parameter to [wc-pay-for-post-product-unlocks] shortcode for performance optimization. When set to "false", the shortcode skips has_access() database queries and omits locked/unlocked CSS classes.
+* BUG FIX (PREMIUM) - Fixed {{excerpt}} token in paywall messages not respecting manually-entered excerpts from Block Editor or Classic Editor. The token now uses the manual excerpt when available, falling back to auto-generated excerpt only when none exists.
+* BUG FIX (PREMIUM) - Fixed issue where on rare occasions having a subscription product and standard product would cause the post not to be unprotected on purchase.
+* UPDATE - Tested up to WordPress 6.9.0
+* UPDATE - Tested up to WooCommerce 10.4.3
+* UPDATE (PREMIUM) - Tested with Elementor 3.34.0
+
+=3.2.31=
+* SECURITY - Hardened against XSS attacks
+* UPDATE - Updated Symfony polyfill packages to v1.33.0
+* UPDATE - Updated Freemius SDK to v2.13.0
+* BUG FIX - Fixed issue where on rare occasions the check for active WooSubscription subscriptions would fail.
+
+=3.2.30=
+* UPDATE - Updated all third-party libraries.
+* FIX - Fixed _load_textdomain_just_in_time notice
 
 =3.2.29=
 * UPDATE - Reverted custom function of customer_has_purchased_product() and conditionalized it to only be used on WC 9.6.0 and 9.6.1 and to use the native wc_customer_bought_product() otherwise, now that WC has fixed the bug in 9.6
@@ -787,4 +811,6 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 * Initial Release
 
 == Upgrade Notice ==
-Updated libraries and new custom function to account for WooCommerce 9.6+ function wc_customer_bought_product() no longer working.
+
+= 3.2.32 =
+Important security and bug fix release. 

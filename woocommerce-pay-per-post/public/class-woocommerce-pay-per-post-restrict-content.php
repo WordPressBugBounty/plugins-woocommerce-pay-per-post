@@ -3,9 +3,6 @@
 /** @noinspection PhpUnused */
 namespace PRAMADILLO;
 
-use PRAMADILLO\INTEGRATIONS\PaidMembershipsPro;
-use PRAMADILLO\INTEGRATIONS\WooCommerceMemberships;
-use PRAMADILLO\INTEGRATIONS\WooCommerceSubscriptions;
 use Woocommerce_Pay_Per_Post_Helper;
 use Pramadillo\PayForPost\Carbon\Carbon;
 use Pramadillo\PayForPost\Carbon\CarbonInterface;
@@ -145,12 +142,19 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
             $id = trim( $id );
             // ID sanitization
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - Checking product ID: ' . $id );
-            // Check for subscription product and purchase
-            if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && $this->integrations['woocommerce-subscriptions']->is_subscription_product( $id ) && Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $this->current_user->user_email, $this->current_user->ID, $id ) && $this->check_if_is_subscriber() ) {
-                Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - User has purchased subscription product ID: ' . $id );
-                return true;
+            // Check if this is a subscription product
+            $is_subscription_product = Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && isset( $this->integrations['woocommerce-subscriptions'] ) && $this->integrations['woocommerce-subscriptions']->is_subscription_product( $id );
+            // Check for subscription product - must have active subscription
+            if ( $is_subscription_product ) {
+                if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $this->current_user->user_email, $this->current_user->ID, $id ) && $this->check_if_is_subscriber() ) {
+                    Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - User has active subscription for product ID: ' . $id );
+                    return true;
+                }
+                Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - Subscription product ID: ' . $id . ' - user does not have active subscription, skipping' );
+                continue;
+                // Skip to next product - don't check as regular product
             }
-            // Check for regular product purchase
+            // Check for regular (non-subscription) product purchase
             if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $this->current_user->user_email, $this->current_user->ID, $id ) ) {
                 Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - User has purchased product ID: ' . $id );
                 return true;
@@ -192,7 +196,7 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
 
     public function check_if_is_paid_memberships_pro_member() {
         //Is user a Paid Memberships Pro Member?
-        if ( Woocommerce_Pay_Per_Post_Helper::can_use_paid_membership_pro() ) {
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_paid_membership_pro() && isset( $this->integrations['paid-memberships-pro'] ) ) {
             $is_member = $this->integrations['paid-memberships-pro']->is_member( $this->post_id );
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_is_paid_memberships_pro_member  - Is the user a Paid Memberships Pro Member? - ' . (( $is_member ? 'true' : 'false' )) );
             return $is_member;
@@ -204,7 +208,7 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
 
     public function check_if_is_member() {
         //Is user a WooCommerce Memberships Member?
-        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_memberships() ) {
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_memberships() && isset( $this->integrations['woocommerce-memberships'] ) ) {
             $is_member = $this->integrations['woocommerce-memberships']->is_member( $this->post_id );
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_is_member  - Is the user a WooMemberships Member? - ' . (( $is_member ? 'true' : 'false' )) );
             return $is_member;
@@ -215,7 +219,7 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
 
     public function check_if_is_subscriber() {
         //Is user a WooCommerce Subscriptions Subscriber?
-        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() ) {
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && isset( $this->integrations['woocommerce-subscriptions'] ) ) {
             $is_subscriber = $this->integrations['woocommerce-subscriptions']->is_subscriber( $this->post_id );
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_is_subscriber  - Does the user have a valid subscription? - ' . (( $is_subscriber ? 'true' : 'false' )) );
             return $is_subscriber;
@@ -236,7 +240,7 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
     }
 
     public function check_if_post_contains_subscription_products() {
-        if ( !Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() ) {
+        if ( !Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() || !isset( $this->integrations['woocommerce-subscriptions'] ) ) {
             return false;
         }
         $post_has_subscription_product = $this->integrations['woocommerce-subscriptions']->post_contains_subscription_products( $this->post_id );
@@ -245,12 +249,18 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
     }
 
     public function check_if_post_contains_membership_products() {
+        if ( !isset( $this->integrations['woocommerce-memberships'] ) ) {
+            return false;
+        }
         $post_has_membership_product = $this->integrations['woocommerce-memberships']->post_contains_membership_products( $this->post_id );
         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_post_contains_membership_products  - Does Post Contain Membership Products? - ' . (( $post_has_membership_product ? 'true' : 'false' )) );
         return $post_has_membership_product;
     }
 
     public function check_if_post_contains_paid_memberships_pro_membership_products() {
+        if ( !isset( $this->integrations['paid-memberships-pro'] ) ) {
+            return false;
+        }
         $post_has_membership_product = $this->integrations['paid-memberships-pro']->post_contains_membership_products( $this->post_id );
         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_post_contains_paid_memberships_pro_membership_products  - Does Post Contain Paid Membership Pro Membership Products? - ' . (( $post_has_membership_product ? 'true' : 'false' )) );
         return $post_has_membership_product;
@@ -286,7 +296,7 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
             var_dump( $check_results );
             echo '</pre>';
         }
-        if ( $check_results['check_if_admin_call'] || !$check_results['check_if_protected'] || !$check_results['check_if_should_show_paywall'] || $check_results['check_if_admin_user_have_access'] || $check_results['check_if_user_role_has_access'] || $check_results['check_if_has_access'] ) {
+        if ( $check_results['check_if_admin_call'] || !$check_results['check_if_protected'] || !$check_results['check_if_should_show_paywall'] || $check_results['check_if_admin_user_have_access'] || $check_results['check_if_user_role_has_access'] || $check_results['check_if_has_access'] && !$check_results['check_if_post_contains_subscription_products'] ) {
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/can_user_view_content  Check Results FAILED returning FALSE' );
             return true;
         }

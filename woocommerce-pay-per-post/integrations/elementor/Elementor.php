@@ -32,7 +32,7 @@
 		}
 
 		public function __construct() {
-			add_action( 'plugins_loaded', [ $this, 'init' ] );
+			add_action( 'init', [ $this, 'init' ] );
 		}
 
 		public function init() {
@@ -341,9 +341,16 @@
 
 
 		public function generate_membership_levels_dropdown( ): array {
+			if ( ! function_exists( 'wc_memberships_get_membership_plans' ) ) {
+				return [];
+			}
 
 			$membership_levels = wc_memberships_get_membership_plans();
 			$products = [];
+
+			if ( empty( $membership_levels ) || ! is_array( $membership_levels ) ) {
+				return [];
+			}
 
 			foreach ( $membership_levels as $level ) {
 				$products[] = ['ID' => $level->id, 'post_title' => $level->name];
@@ -357,6 +364,8 @@
 
 		public function has_access( $product_ids ): bool {
 			$post_id = get_the_ID();
+			Woocommerce_Pay_Per_Post_Helper::logger( 'ELEMENTOR has_access() called for post ID: ' . $post_id . ' with product_ids: ' . print_r( $product_ids, true ) );
+
 			$checks = [
 				'check_if_logged_in',
 				'check_if_admin_call',

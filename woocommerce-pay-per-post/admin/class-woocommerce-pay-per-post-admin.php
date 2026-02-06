@@ -18,6 +18,20 @@ class Woocommerce_Pay_Per_Post_Admin {
     ];
 
     public function __construct() {
+        // Integrations are initialized in init_integrations() which is called from admin_init
+        // This ensures other plugins (WooCommerce Subscriptions, Memberships, etc.) are fully loaded
+    }
+
+    /**
+     * Initialize integrations after all plugins are loaded.
+     * Called from admin_init hook to ensure WooCommerce extensions are available.
+     */
+    public function init_integrations() {
+        // Only initialize once
+        if ( $this->integrations !== null ) {
+            return;
+        }
+        $this->integrations = [];
     }
 
     /** @noinspection PhpUnused */
@@ -234,7 +248,7 @@ class Woocommerce_Pay_Per_Post_Admin {
         );
         wp_register_style(
             WC_PPP_SLUG . '_select2',
-            plugin_dir_url( __FILE__ ) . 'css/select2.min.css"',
+            plugin_dir_url( __FILE__ ) . 'css/select2.min.css',
             [],
             WC_PPP_VERSION
         );

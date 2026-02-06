@@ -20,6 +20,11 @@
 			$selected          = empty( $selected ) ? array() : $selected;
 			$drop_down         = '';
 			$membership_levels = $this->get_membership_levels();
+
+			if ( empty( $membership_levels ) || ! is_array( $membership_levels ) ) {
+				return '';
+			}
+
 			$drop_down         .= '<optgroup label="PaidMembershipPro Membership Levels">';
 
 			foreach ( $membership_levels as $level ) {
@@ -80,10 +85,15 @@
 				$product_ids = (array) get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true );
 			}
 
+			$membership_levels = $this->get_membership_levels();
+
+			if ( empty( $membership_levels ) || ! is_array( $membership_levels ) ) {
+				return false;
+			}
+
 			foreach ( $product_ids as $product_id ) {
 
-				foreach ( $this->get_membership_levels() as $membership_level ) {
-
+				foreach ( $membership_levels as $membership_level ) {
 
 					if ( $product_id == $membership_level->id ) {
 						return true;

@@ -158,7 +158,8 @@ class Woocommerce_Pay_Per_Post_Debug {
 
     public static function get_transient_timeout( $transient ) {
         global $wpdb;
-        $transient_timeout = $wpdb->get_col( "SELECT option_value FROM {$wpdb->options} WHERE option_name LIKE '%_transient_timeout_{$transient}%'" );
+        // Use prepared statement to prevent SQL injection
+        $transient_timeout = $wpdb->get_col( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name LIKE %s", '%_transient_timeout_' . $wpdb->esc_like( $transient ) . '%' ) );
         return $transient_timeout[0];
     }
 

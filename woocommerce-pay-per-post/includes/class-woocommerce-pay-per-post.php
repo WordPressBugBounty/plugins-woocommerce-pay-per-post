@@ -16,6 +16,10 @@ class Woocommerce_Pay_Per_Post {
 
     private function define_admin_hooks() {
         $plugin_admin = new Woocommerce_Pay_Per_Post_Admin();
+        // Initialize integrations at early 'init' priority (1)
+        // This ensures all plugins are loaded and their classes are available
+        // but fires before most other init hooks
+        add_action( 'init', [$plugin_admin, 'init_integrations'], 1 );
         $this->loader->add_action( 'init', $plugin_admin, 'admin_init' );
         $this->loader->add_action( 'admin_menu', $plugin_admin, 'add_plugin_options' );
         $this->loader->add_action( 'admin_notices', $plugin_admin, 'admin_notices' );
@@ -83,7 +87,7 @@ class Woocommerce_Pay_Per_Post {
 
     private function set_locale() {
         $plugin_i18n = new Woocommerce_Pay_Per_Post_i18n();
-        $this->loader->add_action( 'plugins_loaded', $plugin_i18n, 'load_plugin_textdomain' );
+        $this->loader->add_action( 'init', $plugin_i18n, 'load_plugin_textdomain' );
     }
 
 }

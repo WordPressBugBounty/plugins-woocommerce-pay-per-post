@@ -492,7 +492,7 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
                 //Uncomment this for full Elementor Data Debug.  Log file grows QUICK, so use sparingly.
                 //Woocommerce_Pay_Per_Post_Helper::logger('Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::get_elementor_product_ids() - $data = $element->get_data(); ' . print_r($data, true));
                 if ( isset( $data['wc_pay_per_post_enable'] ) && $data['wc_pay_per_post_enable'] === 'yes' ) {
-                    if ( count( $data['wc_pay_per_post_select_products'] ) > 0 ) {
+                    if ( isset( $data['wc_pay_per_post_select_products'] ) && (array) count( $data['wc_pay_per_post_select_products'] ) > 0 ) {
                         $product_ids = $data['wc_pay_per_post_select_products'];
                     }
                 }
@@ -653,49 +653,16 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
     }
 
     public static function get_last_purchase_date( $post_id, $user_id = null ) {
-        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Restrict_Content/get_last_purchase_date__premium_only  - Called' );
+        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Helper/get_last_purchase_date - Called' );
+        // This feature requires premium
+        if ( !wcppp_freemius()->is__premium_only() || !wcppp_freemius()->can_use_premium_code() ) {
+            return null;
+        }
         if ( empty( $user_id ) ) {
             $user_id = get_current_user_id();
         }
-        global $wpdb;
-        $product_ids = (array) get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true );
-        if ( Woocommerce_Pay_Per_Post_Helper::hops_enabled() ) {
-            $sql = "SELECT main_order.id\n                    FROM {$wpdb->prefix}wc_orders AS main_order\n                    INNER JOIN {$wpdb->prefix}wc_orders_meta AS order_meta ON main_order.id = order_meta.order_id\n                    INNER JOIN {$wpdb->prefix}woocommerce_order_items AS item ON main_order.id = item.order_id\n                    INNER JOIN {$wpdb->prefix}woocommerce_order_itemmeta AS item_meta ON item.order_item_id = item_meta.order_item_id\n                    WHERE main_order.status IN ('wc-completed', 'wc-processing')\n                    AND main_order.customer_id = {$user_id}\n                    AND item_meta.meta_key IN ('_product_id', '_variation_id')\n                    AND item_meta.meta_value != 0\n                    AND item_meta.meta_value IN ('" . implode( "','", $product_ids ) . "')\n                    ORDER BY main_order.date_created_gmt DESC LIMIT 1";
-        } else {
-            $sql = "SELECT post.id FROM {$wpdb->posts} AS post\n                            INNER JOIN {$wpdb->postmeta} AS post_meta ON post.ID = post_meta.post_id\n                            INNER JOIN {$wpdb->prefix}woocommerce_order_items AS item ON post.ID = item.order_id\n                            INNER JOIN {$wpdb->prefix}woocommerce_order_itemmeta AS item_meta ON item.order_item_id = item_meta.order_item_id\n                            WHERE post.post_type = 'shop_order'\n                            AND post.post_status IN ( 'wc-completed', 'wc-processing' )\n                            AND post_meta.meta_key IN ( '_customer_user' )\n                            AND item_meta.meta_key IN ( '_product_id', '_variation_id' )\n                            AND item_meta.meta_value != 0\n                            AND post_meta.meta_value = {$user_id}\n                            AND item_meta.meta_value IN ('" . implode( "','", $product_ids ) . "')\n                            ORDER BY post.post_date DESC LIMIT 1";
-        }
-        //echo '<pre>'.print_r($sql,true).'</pre>';
-        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Restrict_Content/get_last_purchase_date__premium_only  - Last Purchase Date Order ID SQL: ' . $sql );
-        $order_id = $wpdb->get_var( $sql );
-        if ( is_null( $order_id ) ) {
-            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Restrict_Content/get_last_purchase_date__premium_only  - Order ID is null - Setting Date to 9/5/82' );
-            return Carbon::parse( '09/05/1982' )->locale( get_user_locale() )->format( get_option( 'date_format' ) );
-        }
-        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Restrict_Content/get_last_purchase_date__premium_only  - Last Purchase Date Order ID: ' . $order_id );
-        /** @noinspection PhpUnnecessaryCurlyVarSyntaxInspection */
-        /** @noinspection PhpUnnecessaryCurlyVarSyntaxInspection */
-        if ( Woocommerce_Pay_Per_Post_Helper::hops_enabled() ) {
-            $sql = "SELECT `date_paid_gmt` as completed_date FROM {$wpdb->prefix}wc_order_operational_data WHERE `order_id`={$order_id}";
-        } else {
-            $sql = "SELECT `meta_value` as completed_date FROM {$wpdb->postmeta} WHERE `meta_key`='_paid_date' AND `post_id`={$order_id}";
-        }
-        $sql = apply_filters(
-            'wc_pay_per_post_override_purchase_date_sql',
-            $sql,
-            $order_id,
-            $post_id,
-            $product_ids
-        );
-        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Restrict_Content/get_last_purchase_date__premium_only  - Last Purchase Date Order SQL: ' . $sql );
-        $order_date = $wpdb->get_var( $sql );
-        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Restrict_Content/get_last_purchase_date__premium_only  - Last Purchase Date Order: ' . $order_date );
-        if ( is_null( $order_date ) ) {
-            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Restrict_Content/get_last_purchase_date__premium_only  - Last Purchase Date IS NULL ABORTING - Setting Date to 9/5/82' );
-            return Carbon::parse( '09/05/1982' )->locale( get_user_locale() )->format( get_option( 'date_format' ) );
-        }
-        $last_purchase_date = Carbon::parse( $order_date )->locale( get_user_locale() );
-        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Restrict_Content/get_last_purchase_date__premium_only  -Last Purchase Carbon: ' . $last_purchase_date );
-        return $last_purchase_date;
+        // Call the secure version from Restrict_Content class
+        return \PRAMADILLO\Woocommerce_Pay_Per_Post_Restrict_Content::get_last_purchase_date__premium_only( $post_id, $user_id );
     }
 
     public static function customer_has_purchased_product( $user_email, $user_id, $product_id_or_variation_id ) {

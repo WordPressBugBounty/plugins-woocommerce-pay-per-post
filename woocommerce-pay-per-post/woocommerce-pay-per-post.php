@@ -10,12 +10,12 @@
  * Plugin Name:             Pay For Post with WooCommerce
  * Plugin URI:              pramadillo.com/plugins/woocommerce-pay-per-post
  * Description:             Allows for the sale of a specific post/page in WordPress through WooCommerce.
- * Version:                 3.1.29
+ * Version:                 3.2.33
  * Requires Plugins:        woocommerce
  * WC requires at least:    2.6
- * WC tested up to:         9.7.0
- * Elementor tested up to: 3.27.3
- * Elementor Pro tested up to: 3.27.3
+ * WC tested up to:         10.4.3
+ * Elementor tested up to: 3.34.1
+ * Elementor Pro tested up to: 3.34.0
  * Author:                  Pramadillo
  * Author URI:              pramadillo.com
  * License:                 GPL-2.0+
@@ -26,7 +26,7 @@
 if ( !defined( 'ABSPATH' ) ) {
     exit;
 }
-const WC_PPP_VERSION = '3.1.29';
+const WC_PPP_VERSION = '3.2.33';
 const WC_PPP_SLUG = 'wc_pay_per_post';
 const WC_PPP_NAME = 'Pay For Post with WooCommerce';
 const WC_PPP_TEMPLATE_PATH = 'woocommerce-pay-per-post/';
@@ -94,6 +94,11 @@ if ( apply_filters( 'wcppp_is_active', true ) === true ) {
             do_action( 'wcppp_freemius_loaded' );
             wcppp_freemius()->add_filter( 'plugin_icon', function () {
                 return dirname( __FILE__ ) . '/admin/img/icon.png';
+            } );
+            // Register uninstall cleanup via Freemius hook (not WordPress uninstall.php)
+            wcppp_freemius()->add_action( 'after_uninstall', function () {
+                require_once plugin_dir_path( __FILE__ ) . 'includes/class-woocommerce-pay-per-post-deactivator.php';
+                Woocommerce_Pay_Per_Post_Deactivator::uninstall();
             } );
             $plugin = new Woocommerce_Pay_Per_Post();
             $plugin->run();
