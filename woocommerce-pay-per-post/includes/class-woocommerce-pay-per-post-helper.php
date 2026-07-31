@@ -88,17 +88,32 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
     }
 
     /**
-     * @param null $post_id
-     * @param bool $track_page_view *
+     * Whether the current user may view the given post.
      *
-     * @return bool
-     * The can_user_view_content function returns on whether the user should see the paywall.
-     * For this that is why we are returning the inverse of the result.
+     * can_user_view_content() already answers "can this user see the content",
+     * with the same polarity as this method — it does NOT return "should the
+     * paywall be shown", which an earlier version of this docblock claimed.
+     * The returned value has always been correct; the log line beneath it used
+     * to print the negation, so a debug log could read "RETURNING - false" for
+     * a user who was plainly reading the content. That cost real time on a
+     * support ticket, so the value is now resolved once and both the log and
+     * the return use it.
+     *
+     * Resolving it once also matters on its own: this used to call
+     * can_user_view_content() twice — once to build the log message and once to
+     * return — so every protected page ran the whole check chain, including the
+     * purchase-date queries and any subscription lookups, twice.
+     *
+     * @param int|null $post_id         Post to check. Defaults to the current post.
+     * @param bool     $track_page_view Whether this call should count as a page view.
+     *
+     * @return bool True when the user may view the content.
      */
     public static function has_access( $post_id = null, bool $track_page_view = true ) : bool {
         $restrict = new Woocommerce_Pay_Per_Post_Restrict_Content($post_id, $track_page_view);
-        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Helper::has_access  - RETURNING - ' . var_export( !$restrict->can_user_view_content(), true ) );
-        return $restrict->can_user_view_content();
+        $has_access = $restrict->can_user_view_content();
+        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Helper::has_access  - RETURNING - ' . var_export( $has_access, true ) );
+        return $has_access;
     }
 
     /**
@@ -248,8 +263,35 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
         return false;
     }
 
+    /**
+     * Whether the WooCommerce Subscriptions integration should be used.
+     *
+     * Detection is by class, not by active plugin, because is_plugin_active()
+     * is not available on the frontend. The side effect is that any plugin
+     * shipping a WooCommerce Subscriptions compatibility layer — Flexible
+     * Subscriptions by WP Desk declares its own WC_Subscriptions_Product, for
+     * example — is indistinguishable from the real thing here.
+     *
+     * That matters because subscription products take a stricter path: in
+     * Restrict_Content::check_if_purchased() a subscription product requires
+     * BOTH a purchase and an active subscription, and is never fallen back to
+     * as a regular purchase. On a store where subscription records are not
+     * reliably created, customers who genuinely paid can be locked out, and
+     * workarounds that fake the subscription answer end up disabling expire and
+     * page-view protection as a side effect.
+     *
+     * The filter lets such a store opt out and have PPP treat those products as
+     * ordinary purchases, so purchase-plus-expiry behaves as configured:
+     *
+     *     add_filter( 'wc_pay_per_post_can_use_woocommerce_subscriptions', '__return_false' );
+     *
+     * Default behaviour is unchanged.
+     *
+     * @return bool
+     */
     public static function can_use_woocommerce_subscriptions() : bool {
-        return false;
+        $can_use = false;
+        return (bool) apply_filters( 'wc_pay_per_post_can_use_woocommerce_subscriptions', $can_use );
     }
 
     public static function can_use_paid_membership_pro() : bool {

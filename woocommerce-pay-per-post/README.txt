@@ -4,12 +4,12 @@ Tags: woocommerce, payforpost, pay for post, sell content,
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mattpram%40gmail%2ecom
 Requires at least: 3.8
 Requires PHP: 7.4
-Tested up to: 6.9.0
-Stable tag: 3.2.33
+Tested up to: 7.0.2
+Stable tag: 3.2.34
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Sell Pages/Posts through WooCommerce 2.6+ quickly and easily. Tested up to WooCommerce Version 10.4.x
+Sell Pages/Posts through WooCommerce 2.6+ quickly and easily. Tested up to WooCommerce Version 10.9.x
 
 == Description ==
 Quickly and easily sell access to pages, posts and custom post types through WooCommerce with Pay For Post with WooCommerce.  I originally created this plugin because I looked everywhere, and I couldn't find a plugin already out there, free or premium, that would do the simple fact of selling access to a particular page or post through WooCommerce.  So I decided to write my own.
@@ -136,6 +136,20 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 
 
 == Changelog ==
+
+=3.2.34=
+* BUG FIX (PREMIUM) - Fixed expire protection reloading a page over and over. The countdown that ends timed access on an open page was scheduled even when the expiry had already passed while the visitor could still see the content, so the page reloaded roughly once a second. Timed access that is genuinely still running is unaffected and still ends on the page the visitor is on.
+* BUG FIX - Fixed the debug log reporting the opposite of the access decision it had just made, which made access issues much harder to diagnose. The access decision itself was always correct.
+* ENHANCEMENT - The access check is now performed once per request instead of twice, removing duplicate database queries on every protected page.
+* ENHANCEMENT - Added the wc_pay_per_post_can_use_woocommerce_subscriptions filter. Pay For Post detects WooCommerce Subscriptions by class name, which also matches plugins that ship a WooCommerce Subscriptions compatibility layer (such as Flexible Subscriptions by WP Desk). On those stores a subscription product requires both a purchase and an active subscription record, so customers who paid can be refused if no subscription record was created. Returning false treats those products as ordinary purchases so purchase plus expiration works as configured: add_filter( 'wc_pay_per_post_can_use_woocommerce_subscriptions', '__return_false' );
+* BUG FIX (PREMIUM) - Page View Restriction now grants exactly the number of views configured. Previously the view being served was not counted until after access had been granted, so a post set to 3 views was readable 4 times and the paywall appeared on the 5th load. A post set to 3 views is now readable 3 times, with the paywall on the 4th. This also corrects the "Page Views: X out of Y" line, which previously showed 0 out of Y on the first view.
+* UPDATE (PREMIUM) - The wc_pay_per_post_enable_pageview_fix filter now defaults to true. Sites that want the previous, more lenient count back can restore it with: add_filter( 'wc_pay_per_post_enable_pageview_fix', '__return_false' );
+* BUG FIX (PREMIUM) - Fixed page view counter not resetting when a user repurchases access to a page/post. Views recorded before the new purchase no longer count against the new allowance.
+* BUG FIX (PREMIUM) - Fixed Elementor element-level protection showing the paywall to users who had already purchased access. Elementor's per-document element cache stored the paywalled markup and served it to everyone; the cache is now cleared and bypassed on PPP-protected documents.
+* UPDATE - Updated Freemius SDK to v2.13.4
+* UPDATE - Tested up to WordPress 7.0.2
+* UPDATE - Tested up to WooCommerce 10.9.4
+* UPDATE (PREMIUM) - Tested with Elementor and Elementor Pro 4.2.0
 
 =3.2.33=
 * BUG FIX - Fixed fatal error when using the purchased content shortcode on free version of the plugin.
@@ -811,6 +825,9 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 * Initial Release
 
 == Upgrade Notice ==
+
+= 3.2.34 =
+Behaviour change for Page View Restriction (premium): the configured number of views is now exact. Posts previously served one view more than configured, so customers on those posts get one fewer free view after updating. To keep the old behaviour, add: add_filter( 'wc_pay_per_post_enable_pageview_fix', '__return_false' );
 
 = 3.2.32 =
 Important security and bug fix release. 

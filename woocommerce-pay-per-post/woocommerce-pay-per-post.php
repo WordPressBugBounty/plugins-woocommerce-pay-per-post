@@ -10,12 +10,12 @@
  * Plugin Name:             Pay For Post with WooCommerce
  * Plugin URI:              pramadillo.com/plugins/woocommerce-pay-per-post
  * Description:             Allows for the sale of a specific post/page in WordPress through WooCommerce.
- * Version:                 3.2.33
+ * Version:                 3.2.34
  * Requires Plugins:        woocommerce
  * WC requires at least:    2.6
- * WC tested up to:         10.4.3
- * Elementor tested up to: 3.34.1
- * Elementor Pro tested up to: 3.34.0
+ * WC tested up to:         10.9.4
+ * Elementor tested up to: 4.2.0
+ * Elementor Pro tested up to: 4.2.0
  * Author:                  Pramadillo
  * Author URI:              pramadillo.com
  * License:                 GPL-2.0+
@@ -26,7 +26,7 @@
 if ( !defined( 'ABSPATH' ) ) {
     exit;
 }
-const WC_PPP_VERSION = '3.2.33';
+const WC_PPP_VERSION = '3.2.34';
 const WC_PPP_SLUG = 'wc_pay_per_post';
 const WC_PPP_NAME = 'Pay For Post with WooCommerce';
 const WC_PPP_TEMPLATE_PATH = 'woocommerce-pay-per-post/';
@@ -49,23 +49,24 @@ if ( apply_filters( 'wcppp_is_active', true ) === true ) {
                     require_once plugin_dir_path( __FILE__ ) . 'freemius/wordpress-sdk/start.php';
                     try {
                         $wcppp_freemius = fs_dynamic_init( [
-                            'id'             => '1664',
-                            'slug'           => 'woocommerce-pay-per-post',
-                            'type'           => 'plugin',
-                            'public_key'     => 'pk_3421f16894101749f184e4e1535da',
-                            'is_premium'     => false,
-                            'premium_suffix' => 'Premium',
-                            'has_addons'     => false,
-                            'has_paid_plans' => true,
-                            'trial'          => [
+                            'id'               => '1664',
+                            'slug'             => 'woocommerce-pay-per-post',
+                            'type'             => 'plugin',
+                            'public_key'       => 'pk_3421f16894101749f184e4e1535da',
+                            'is_premium'       => false,
+                            'premium_suffix'   => 'Premium',
+                            'has_addons'       => false,
+                            'has_paid_plans'   => true,
+                            'trial'            => [
                                 'days'               => 7,
                                 'is_require_payment' => true,
                             ],
-                            'menu'           => [
+                            'menu'             => [
                                 'slug'       => 'wc_pay_per_post',
                                 'first-path' => 'admin.php?page=wc_pay_per_post-whats-new',
                             ],
-                            'is_live'        => true,
+                            'is_live'          => true,
+                            'is_org_compliant' => true,
                         ] );
                     } catch ( Freemius_Exception $e ) {
                         die( esc_html( $e->getMessage() ) );

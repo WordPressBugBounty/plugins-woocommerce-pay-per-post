@@ -232,10 +232,10 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_protected  - BACKTRACE - Called From - ' . print_r( debug_backtrace()[1]['function'], true ) );
         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_protected  - product_ids - ' . var_export( $this->product_ids['product_ids'], true ) );
         if ( $this->protection_type || is_array( $this->product_ids['product_ids'] ) || !empty( $this->product_ids['product_ids'] ) ) {
-            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_protected  - Page is NOT protected.' );
+            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_protected  - Page IS protected.' );
             return true;
         }
-        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_protected  - Page IS protected.' );
+        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_protected  - Page is NOT protected.' );
         return false;
     }
 
@@ -425,25 +425,49 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
         return $date->copy()->{$diff_method}( $current_time, CarbonInterface::DIFF_RELATIVE_TO_NOW );
     }
 
+    /**
+     * Emit the client-side countdown that reloads the page the moment timed
+     * access runs out.
+     *
+     * This exists so access actually ends on a page the visitor is sitting on —
+     * think an hour of video-on-demand viewing. Without it the content stays
+     * readable until they navigate away, whatever the expiry says.
+     *
+     * Only schedule the reload when the expiry is still ahead of us. If it has
+     * already passed while the visitor can nonetheless see the content — which
+     * happens when access comes from something other than the purchase date,
+     * e.g. another product on the post granting it — then reloading cannot
+     * change what renders. The script would fire on its first tick, and the
+     * fresh page would schedule another immediate reload, looping roughly once
+     * a second for as long as the tab is open.
+     *
+     * When the expiry is genuinely in the future the behaviour is unchanged:
+     * one reload, at the moment access ends, which then renders the paywall.
+     */
     protected function countdown_refresh() {
-        if ( !empty( $this->user_post_info['expiration_date'] ) ) {
-            ?>
-            <script>
-              const countDownDate = new Date('<?php 
-            echo $this->user_post_info['expiration_date']->format( Woocommerce_Pay_Per_Post_Helper::date_time_format() );
-            ?>').getTime()
-              const x = setInterval(function () {
-                const now = new Date().getTime()
-                const distance = countDownDate - now
-                //console.log('remaining', Math.floor(distance / 1000 / 60));
-                if (distance < 0) {
-                  clearInterval(x)
-                  location.reload()
-                }
-              }, 1000)
-            </script>
-		<?php 
+        if ( empty( $this->user_post_info['expiration_date'] ) ) {
+            return;
         }
+        if ( $this->user_post_info['expiration_date']->isPast() ) {
+            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/countdown_refresh - Expiration already passed while the visitor still has access; not scheduling a reload.' );
+            return;
+        }
+        ?>
+        <script>
+          const countDownDate = new Date('<?php 
+        echo $this->user_post_info['expiration_date']->format( Woocommerce_Pay_Per_Post_Helper::date_time_format() );
+        ?>').getTime()
+          const x = setInterval(function () {
+            const now = new Date().getTime()
+            const distance = countDownDate - now
+            //console.log('remaining', Math.floor(distance / 1000 / 60));
+            if (distance < 0) {
+              clearInterval(x)
+              location.reload()
+            }
+          }, 1000)
+        </script>
+		<?php 
     }
 
     protected function shortcode_pageview_status( $template ) {

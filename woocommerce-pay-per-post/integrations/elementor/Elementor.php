@@ -98,7 +98,57 @@
 				add_action( 'elementor/frontend/the_content', [ $public, 'restrict_content' ] );
 			}
 
+			// Elementor's document-level cache stores per-document (not per-user) rendered HTML.
+			// This is incompatible with PPP element-level protection, which is user-specific.
+			// When PPP-protected elements are present, we must:
+			//   1. Clear any existing stale cached HTML.
+			//   2. Block Elementor from re-caching this document's output.
+			if ( $this->document_has_ppp_protection( $data ) ) {
+				$post_id = get_the_ID();
+				// Remove stale cached HTML so Elementor re-renders from scratch this request.
+				delete_post_meta( $post_id, '_elementor_element_cache' );
+				// Prevent Elementor from storing a new per-document cache after rendering.
+				add_filter( 'update_post_metadata', [ $this, 'block_elementor_element_cache_write' ], 10, 4 );
+			}
+
 			return $data;
+		}
+
+		/**
+		 * Recursively scan Elementor element data to determine whether any element has
+		 * PPP protection enabled. Used to decide whether to disable Elementor's document cache.
+		 *
+		 * @param array $data Elementor elements array (from builder_content_data filter).
+		 * @return bool True if at least one element has PPP protection enabled.
+		 */
+		private function document_has_ppp_protection( array $data ): bool {
+			foreach ( $data as $element ) {
+				$settings = $element['settings'] ?? [];
+				if ( isset( $settings[ WC_PPP_SLUG . '_enable' ] ) && 'yes' === $settings[ WC_PPP_SLUG . '_enable' ] ) {
+					return true;
+				}
+				if ( ! empty( $element['elements'] ) && $this->document_has_ppp_protection( $element['elements'] ) ) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/**
+		 * Prevent Elementor from writing the per-document element cache when PPP element
+		 * protection is active. Added conditionally via elementor_restrict_content().
+		 *
+		 * @param mixed  $check     Short-circuit return value (null by default).
+		 * @param int    $post_id   Post ID.
+		 * @param string $meta_key  Meta key being updated.
+		 * @param mixed  $meta_value Value being stored.
+		 * @return mixed False to block the update; original $check otherwise.
+		 */
+		public function block_elementor_element_cache_write( $check, $post_id, $meta_key, $meta_value ) {
+			if ( '_elementor_element_cache' === $meta_key ) {
+				return false;
+			}
+			return $check;
 		}
 
 		public function controls( Controls_Stack $element, $section_id ) {
@@ -218,7 +268,6 @@
 		 * @return bool Should Elementor's content be rendered?
 		 */
 		public function should_render( bool $should_render, Element_Base $element ): bool {
-
 			$settings = $element->get_settings_for_display();
 
 			if ( isset( $settings[ WC_PPP_SLUG . '_enable' ] ) && 'yes' === $settings[ WC_PPP_SLUG . '_enable' ] ) {
@@ -247,7 +296,6 @@
 		 * @return void
 		 */
 		public function element( Element_Base $element ) {
-
 			$settings        = $element->get_settings_for_display();
 			$fallback_markup = null;
 
@@ -364,6 +412,7 @@
 
 		public function has_access( $product_ids ): bool {
 			$post_id = get_the_ID();
+
 			Woocommerce_Pay_Per_Post_Helper::logger( 'ELEMENTOR has_access() called for post ID: ' . $post_id . ' with product_ids: ' . print_r( $product_ids, true ) );
 
 			$checks = [
@@ -389,12 +438,7 @@
 				$checks[] = 'check_if_is_paid_memberships_pro_member';
 			}
 
-			//Preform Checks
 			$check_results = [];
-
-
-		//The issue is the protection checks is looking for a post_id where as we are passing the product Id.
-
 
 			foreach ( $checks as $check ) {
 				$check_results[ $check ] = Woocommerce_Pay_Per_Post_Protection_Checks::$check( $post_id, $product_ids );
@@ -426,8 +470,7 @@
 				}
 			}
 
-
-				return false;
+			return false;
 		}
 
 
