@@ -26,6 +26,253 @@
 
                     </div>
 
+                    <br><br>
+
+                    <div class="postbox wc-ppp-access-diagnostic">
+                        <h2 class="hndle"><?php esc_html_e( 'Access Diagnostic', 'wc_pay_per_post' ); ?></h2>
+
+                        <div class="inside">
+                            <p><?php esc_html_e( 'Answers one question: can this customer see this page, and why? The check runs the real protection engine as that customer, exactly as a visit to the page would — it does not re-implement the rules, and it does not consume one of their page views.', 'wc_pay_per_post' ); ?></p>
+
+                            <form method="post" action="">
+			                    <?php wp_nonce_field( 'wc_ppp_access_diagnostic', 'wc_ppp_access_diagnostic_nonce' ); ?>
+                                <table class="form-table" role="presentation">
+                                    <tr>
+                                        <th scope="row">
+                                            <label for="wc_ppp_diagnostic_email"><?php esc_html_e( 'Customer email', 'wc_pay_per_post' ); ?></label>
+                                        </th>
+                                        <td>
+                                            <input type="email" class="regular-text" id="wc_ppp_diagnostic_email"
+                                                   name="wc_ppp_diagnostic_email" required
+                                                   value="<?php echo esc_attr( $diagnostic_email ); ?>">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">
+                                            <label for="wc_ppp_diagnostic_url"><?php esc_html_e( 'Page URL', 'wc_pay_per_post' ); ?></label>
+                                        </th>
+                                        <td>
+                                            <input type="text" class="large-text code" id="wc_ppp_diagnostic_url"
+                                                   name="wc_ppp_diagnostic_url" required
+                                                   value="<?php echo esc_attr( $diagnostic_url ); ?>">
+                                            <p class="description"><?php esc_html_e( 'The full URL the customer is trying to open. A numeric post ID also works if the URL will not resolve.', 'wc_pay_per_post' ); ?></p>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <p class="submit">
+                                    <input type="submit" class="button button-primary"
+                                           value="<?php esc_attr_e( 'Check Access', 'wc_pay_per_post' ); ?>">
+                                </p>
+                            </form>
+
+			                <?php if ( is_array( $diagnostic_result ) ) : ?>
+				                <?php if ( isset( $diagnostic_result['error'] ) ) : ?>
+                                    <div class="notice notice-error inline">
+                                        <p><?php echo esc_html( $diagnostic_result['error'] ); ?></p>
+                                    </div>
+				                <?php else : ?>
+                                    <hr>
+                                    <h3<?php echo $diagnostic_result['verdict'] ? ' class="success"' : ' class="error-message"'; ?>>
+					                    <?php
+					                    echo $diagnostic_result['verdict']
+						                    ? esc_html__( 'HAS ACCESS', 'wc_pay_per_post' )
+						                    : esc_html__( 'NO ACCESS', 'wc_pay_per_post' );
+					                    ?>
+                                        —
+					                    <?php echo esc_html( $diagnostic_result['user']->user_email ); ?>
+                                        →
+					                    <?php echo esc_html( get_the_title( $diagnostic_result['post'] ) ); ?>
+                                        <?php /* translators: %d: post ID */ ?>
+                                        <small>(<?php echo esc_html( sprintf( __( 'post %d', 'wc_pay_per_post' ), $diagnostic_result['post']->ID ) ); ?>)</small>
+                                    </h3>
+
+                                    <p><strong><?php echo esc_html( $diagnostic_result['reason'] ); ?></strong></p>
+
+					                <?php if ( ! empty( $diagnostic_result['warnings'] ) ) : ?>
+						                <?php foreach ( $diagnostic_result['warnings'] as $warning ) : ?>
+                                            <div class="notice notice-warning inline">
+                                                <p><?php echo esc_html( $warning ); ?></p>
+                                            </div>
+						                <?php endforeach; ?>
+					                <?php endif; ?>
+
+                                    <h4><?php esc_html_e( 'Evidence', 'wc_pay_per_post' ); ?></h4>
+                                    <table class="wp-list-table widefat fixed striped table-view-list">
+                                        <tbody>
+										<?php foreach ( $diagnostic_result['evidence'] as $label => $value ) : ?>
+                                            <tr>
+                                                <td style="width:30%;"><strong><?php echo esc_html( $label ); ?></strong></td>
+                                                <td><?php echo nl2br( esc_html( (string) $value ) ); ?></td>
+                                            </tr>
+										<?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+
+			                        <?php if ( ! empty( $diagnostic_result['page_config'] ) ) : ?>
+                                        <h4><?php esc_html_e( 'Page configuration', 'wc_pay_per_post' ); ?></h4>
+                                        <table class="wp-list-table widefat fixed striped table-view-list">
+                                            <tbody>
+										    <?php foreach ( $diagnostic_result['page_config'] as $label => $value ) : ?>
+                                                <tr>
+                                                    <td style="width:30%;"><strong><?php echo esc_html( $label ); ?></strong></td>
+                                                    <td><?php echo esc_html( (string) $value ); ?></td>
+                                                </tr>
+										    <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+			                        <?php endif; ?>
+
+			                        <?php if ( ! empty( $diagnostic_result['products'] ) ) : ?>
+                                        <h4><?php esc_html_e( 'Products that unlock this page', 'wc_pay_per_post' ); ?></h4>
+                                        <table class="wp-list-table widefat fixed striped table-view-list">
+                                            <thead>
+                                            <tr>
+                                                <th><?php esc_html_e( 'Product', 'wc_pay_per_post' ); ?></th>
+                                                <th><?php esc_html_e( 'Name', 'wc_pay_per_post' ); ?></th>
+                                                <th><?php esc_html_e( 'Type', 'wc_pay_per_post' ); ?></th>
+                                                <th><?php esc_html_e( 'Subscription?', 'wc_pay_per_post' ); ?></th>
+                                                <th><?php esc_html_e( 'Membership?', 'wc_pay_per_post' ); ?></th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+										    <?php foreach ( $diagnostic_result['products'] as $p ) : ?>
+                                                <tr>
+                                                    <td><a href="<?php echo esc_url( admin_url( 'post.php?post=' . (int) $p['id'] . '&action=edit' ) ); ?>">#<?php echo esc_html( $p['id'] ); ?></a></td>
+                                                    <td><?php echo esc_html( $p['name'] ); ?></td>
+                                                    <td><?php echo esc_html( $p['type'] ); ?></td>
+                                                    <td><?php echo esc_html( $p['subscription'] ); ?></td>
+                                                    <td><?php echo esc_html( $p['membership'] ); ?></td>
+                                                </tr>
+										    <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+			                        <?php endif; ?>
+
+			                        <?php if ( ! empty( $diagnostic_result['history']['orders'] ) ) : ?>
+                                        <h4>
+					                        <?php
+					                        printf(
+						                        /* translators: 1: total orders, 2: how many count */
+						                        esc_html__( 'Purchase history — %1$d order(s), %2$d counting toward access', 'wc_pay_per_post' ),
+						                        (int) $diagnostic_result['history']['total_found'],
+						                        (int) $diagnostic_result['history']['qualifying_count']
+					                        );
+					                        ?>
+                                        </h4>
+                                        <p class="description"><?php esc_html_e( 'Nothing is filtered out. Found by customer account AND by billing email, so guest orders and orders on a second account appear too. A star marks a product that unlocks this page.', 'wc_pay_per_post' ); ?></p>
+					                    <?php if ( ! empty( $diagnostic_result['history']['truncated'] ) ) : ?>
+                                            <div class="notice notice-warning inline"><p><?php esc_html_e( 'The order list was capped, so older orders are not shown.', 'wc_pay_per_post' ); ?></p></div>
+					                    <?php endif; ?>
+                                        <table class="wp-list-table widefat fixed striped table-view-list">
+                                            <thead>
+                                            <tr>
+                                                <th><?php esc_html_e( 'Order', 'wc_pay_per_post' ); ?></th>
+                                                <th><?php esc_html_e( 'Placed', 'wc_pay_per_post' ); ?></th>
+                                                <th><?php esc_html_e( 'Paid', 'wc_pay_per_post' ); ?></th>
+                                                <th><?php esc_html_e( 'Status', 'wc_pay_per_post' ); ?></th>
+                                                <th><?php esc_html_e( 'Attached to', 'wc_pay_per_post' ); ?></th>
+                                                <th><?php esc_html_e( 'Items', 'wc_pay_per_post' ); ?></th>
+                                                <th><?php esc_html_e( 'Counts?', 'wc_pay_per_post' ); ?></th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+										    <?php foreach ( $diagnostic_result['history']['orders'] as $row ) : ?>
+                                                <tr>
+                                                    <td><a href="<?php echo esc_url( admin_url( 'admin.php?page=wc-orders&action=edit&id=' . (int) $row['id'] ) ); ?>">#<?php echo esc_html( $row['id'] ); ?></a></td>
+                                                    <td><?php echo esc_html( $row['date'] ); ?></td>
+                                                    <td><?php echo esc_html( $row['paid'] ); ?></td>
+                                                    <td><?php echo esc_html( $row['status'] ); ?></td>
+                                                    <td><?php echo esc_html( $row['attachment'] ); ?></td>
+                                                    <td>
+													    <?php foreach ( $row['items'] as $item ) : ?>
+                                                            <div>
+															    <?php echo $item['required'] ? '<strong>&#9733;</strong> ' : ''; ?>
+                                                                <a href="<?php echo esc_url( admin_url( 'post.php?post=' . (int) $item['id'] . '&action=edit' ) ); ?>">#<?php echo esc_html( $item['id'] ); ?></a>
+														        <?php echo esc_html( $item['name'] ); ?>
+                                                            </div>
+													    <?php endforeach; ?>
+                                                    </td>
+                                                    <td class="<?php echo $row['qualifies'] ? 'success' : 'error'; ?>">
+													    <?php
+													    echo $row['qualifies']
+														    ? esc_html__( 'yes', 'wc_pay_per_post' )
+														    : esc_html__( 'no — ', 'wc_pay_per_post' ) . esc_html( $row['why_not'] );
+													    ?>
+                                                    </td>
+                                                </tr>
+										    <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+			                        <?php endif; ?>
+
+			                        <?php if ( ! empty( $diagnostic_result['history']['other_products'] ) ) : ?>
+                                        <h4><?php esc_html_e( 'Products this customer bought that do NOT unlock this page', 'wc_pay_per_post' ); ?></h4>
+                                        <p class="description"><?php esc_html_e( 'If the customer believes they paid for this page, the answer is usually here. These products are not listed on the page, so the plugin never counts them.', 'wc_pay_per_post' ); ?></p>
+                                        <table class="wp-list-table widefat fixed striped table-view-list">
+                                            <thead>
+                                            <tr>
+                                                <th><?php esc_html_e( 'Product', 'wc_pay_per_post' ); ?></th>
+                                                <th><?php esc_html_e( 'Name', 'wc_pay_per_post' ); ?></th>
+                                                <th><?php esc_html_e( 'Times bought', 'wc_pay_per_post' ); ?></th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+										    <?php foreach ( $diagnostic_result['history']['other_products'] as $p ) : ?>
+                                                <tr>
+                                                    <td><a href="<?php echo esc_url( admin_url( 'post.php?post=' . (int) $p['id'] . '&action=edit' ) ); ?>">#<?php echo esc_html( $p['id'] ); ?></a></td>
+                                                    <td><?php echo esc_html( $p['name'] ); ?></td>
+                                                    <td><?php echo esc_html( $p['count'] ); ?></td>
+                                                </tr>
+										    <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+			                        <?php endif; ?>
+
+                                    <h4><?php esc_html_e( 'Environment', 'wc_pay_per_post' ); ?></h4>
+                                    <table class="wp-list-table widefat fixed striped table-view-list">
+                                        <tbody>
+										<?php foreach ( $diagnostic_result['environment'] as $label => $value ) : ?>
+                                            <tr>
+                                                <td style="width:30%;"><strong><?php echo esc_html( $label ); ?></strong></td>
+                                                <td><?php echo esc_html( (string) $value ); ?></td>
+                                            </tr>
+										<?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+
+                                    <h4><?php esc_html_e( 'Individual checks', 'wc_pay_per_post' ); ?></h4>
+                                    <table class="wp-list-table widefat fixed striped table-view-list">
+                                        <tbody>
+										<?php foreach ( $diagnostic_result['checks'] as $check => $passed ) : ?>
+                                            <tr>
+                                                <td style="width:60%;"><code><?php echo esc_html( $check ); ?></code></td>
+                                                <td class="<?php echo $passed ? 'success' : 'error'; ?>">
+													<?php echo $passed ? 'true' : 'false'; ?>
+                                                </td>
+                                            </tr>
+										<?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+
+                                    <h4><?php esc_html_e( 'Copy for a support reply', 'wc_pay_per_post' ); ?></h4>
+                                    <textarea id="wc-ppp-diagnostic-text" readonly
+                                              style="width:100%; height:260px; font-family:monospace;"><?php
+										echo esc_textarea( Woocommerce_Pay_Per_Post_Access_Diagnostic::as_text( $diagnostic_result ) );
+										?></textarea>
+                                    <p>
+                                        <button type="button" class="button" onclick="
+                                            var el = document.getElementById('wc-ppp-diagnostic-text');
+                                            el.select();
+                                            document.execCommand('copy');
+                                            this.textContent = '<?php echo esc_js( __( 'Copied', 'wc_pay_per_post' ) ); ?>';
+                                        "><?php esc_html_e( 'Copy to clipboard', 'wc_pay_per_post' ); ?></button>
+                                    </p>
+				                <?php endif; ?>
+			                <?php endif; ?>
+                        </div>
+
+                    </div>
+
 	                <?php if ( $enable_debugging ): ?>
                     <br><br>
 

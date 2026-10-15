@@ -52,19 +52,47 @@ class Woocommerce_Pay_Per_Post_Admin {
         }
     }
 
+    /**
+     * Register the "custom field support" notice.
+     *
+     * This only registers the callback — the post types are inspected later, when
+     * the notice is actually rendered. That distinction is the whole point.
+     *
+     * This method runs on `init` at priority 10, which is also where most custom
+     * post types are registered. Asking `post_type_supports()` here reads a post
+     * type that frequently does not exist yet, and an unregistered post type
+     * reports no support for anything — so the plugin warned that custom fields
+     * were disabled on post types that had them enabled all along. On this very
+     * site PPP is callback 106 of 190 on `init:10`, with WooCommerce Memberships
+     * (156) and Elementor (183) registering post types after it.
+     *
+     * `admin_notices` fires long after `init` has completed, so by then every
+     * post type is registered and the answer is the real one.
+     *
+     * @see Woocommerce_Pay_Per_Post_Admin::custom_post_type_support_notice()
+     */
     public function check_requirements_for_selected_custom_post_types() {
+        add_action( 'admin_notices', [$this, 'custom_post_type_support_notice'] );
+    }
+
+    /**
+     * Warn about selected post types that do not support custom fields.
+     *
+     * The Block Editor integration stores protection settings in post meta, which
+     * requires custom-field support on the post type.
+     */
+    public function custom_post_type_support_notice() {
         $failed = [];
         foreach ( $this->get_post_types() as $post_type ) {
             if ( false === post_type_supports( $post_type, 'custom-fields' ) ) {
                 $failed[] = $post_type;
             }
         }
-        if ( count( $failed ) > 0 ) {
-            $message = 'In order to utilize the Block Editor and Pay for Post on the <code>' . implode( ', ', $failed ) . '</code> custom post type(s), you must enable <a href="https://developer.wordpress.org/reference/functions/add_post_type_support/" target="_blank">custom field support</a> for the custom post types or utilize disable Block Editor Integration in the <a href="' . admin_url() . '/admin.php?page=wc_pay_per_post-settings">Settings</a>';
-            add_action( 'admin_notices', function () use($message) {
-                echo '<div class="notice notice-error is-dismissible"><p>' . $message . '</p></div>';
-            } );
+        if ( count( $failed ) === 0 ) {
+            return;
         }
+        $message = 'In order to utilize the Block Editor and Pay for Post on the <code>' . implode( ', ', $failed ) . '</code> custom post type(s), you must enable <a href="https://developer.wordpress.org/reference/functions/add_post_type_support/" target="_blank">custom field support</a> for the custom post types or utilize disable Block Editor Integration in the <a href="' . admin_url() . '/admin.php?page=wc_pay_per_post-settings">Settings</a>';
+        echo '<div class="notice notice-error is-dismissible"><p>' . $message . '</p></div>';
     }
 
     public function edit_post_block_editor( $post_id ) {
@@ -105,11 +133,23 @@ class Woocommerce_Pay_Per_Post_Admin {
             }
             $wcppp_freemius_upgrade_url = ( wcppp_freemius()->is_not_paying() && !wcppp_freemius()->is_trial() ? wcppp_freemius()->get_upgrade_url() : '' );
             $can_use_premium_code = wcppp_freemius()->is__premium_only() && wcppp_freemius()->can_use_premium_code();
+            // Use the manifest wp-scripts generates alongside the bundle. Passing
+            // null for both arguments, as this once did, meant the script declared no
+            // dependencies (so its load order relative to the editor packages it needs
+            // was luck) and carried no version at all — the URL never changed between
+            // plugin releases, so a browser or CDN holding an old copy had no signal to
+            // refetch it. The manifest's version is a content hash, so it changes
+            // exactly when the bundle does.
+            $asset_file = plugin_dir_path( __FILE__ ) . 'wp-editor-integration/build/index.asset.php';
+            $asset = ( file_exists( $asset_file ) ? require $asset_file : [
+                'dependencies' => [],
+                'version'      => WC_PPP_VERSION,
+            ] );
             wp_enqueue_script(
                 WC_PPP_SLUG . '_wp-editor-integration-js',
                 plugin_dir_url( __FILE__ ) . 'wp-editor-integration/build/index.js',
-                null,
-                null,
+                $asset['dependencies'] ?? [],
+                $asset['version'] ?? WC_PPP_VERSION,
                 true
             );
             wp_enqueue_style( WC_PPP_SLUG . '_admin' );
@@ -140,7 +180,9 @@ class Woocommerce_Pay_Per_Post_Admin {
 
     public function wp_editor_integration_register_post_meta() {
         register_meta( 'post', '_ppp_document_settings_meta', [
-            'auth_callback' => '__return_true',
+            'auth_callback' => static function ( $allowed, $meta_key, $post_id ) {
+                return current_user_can( 'edit_post', $post_id );
+            },
             'default'       => '',
             'show_in_rest'  => true,
             'single'        => true,
@@ -396,12 +438,30 @@ class Woocommerce_Pay_Per_Post_Admin {
         wp_enqueue_style( WC_PPP_SLUG . '_admin' );
         $enable_debugging = (bool) get_option( WC_PPP_SLUG . '_enable_debugging', false );
         $transients = Woocommerce_Pay_Per_Post_Debug::get_transients();
-        if ( isset( $_POST['wc_ppp_create_table_nonce'] ) && wp_verify_nonce( $_POST['wc_ppp_create_table_nonce'], 'wc_ppp_create_table' ) ) {
+        // create_table__premium_only() is stripped from the free build. The
+        // button that posts this nonce is only rendered for licensed installs,
+        // so this is unreachable there today — but nothing in the handler said
+        // so, and a stray POST would have been a fatal.
+        if ( isset( $_POST['wc_ppp_create_table_nonce'] ) && wp_verify_nonce( $_POST['wc_ppp_create_table_nonce'], 'wc_ppp_create_table' ) && Woocommerce_Pay_Per_Post_Helper::can_use_premium_protection() ) {
             require_once WC_PPP_PATH . '/includes/class-woocommerce-pay-per-post-activator.php';
             Woocommerce_Pay_Per_Post_Activator::create_table__premium_only();
         }
         if ( isset( $_POST['wc_ppp_delete_transients_nonce'] ) && wp_verify_nonce( $_POST['wc_ppp_delete_transients_nonce'], 'wc_ppp_delete_transients' ) ) {
             Woocommerce_Pay_Per_Post_Debug::delete_transients();
+        }
+        // Access diagnostic. This evaluates access AS ANOTHER USER, so it is
+        // gated on manage_options in addition to the nonce.
+        $diagnostic_email = '';
+        $diagnostic_url = '';
+        $diagnostic_result = null;
+        if ( isset( $_POST['wc_ppp_access_diagnostic_nonce'] ) && wp_verify_nonce( $_POST['wc_ppp_access_diagnostic_nonce'], 'wc_ppp_access_diagnostic' ) && current_user_can( 'manage_options' ) ) {
+            $diagnostic_email = sanitize_email( wp_unslash( $_POST['wc_ppp_diagnostic_email'] ?? '' ) );
+            $raw_url = trim( (string) wp_unslash( $_POST['wc_ppp_diagnostic_url'] ?? '' ) );
+            // A bare post ID is an accepted input — it is the fallback when a URL
+            // will not resolve. It has to be checked BEFORE esc_url_raw(), which
+            // turns "1010" into "http://1010" rather than rejecting it.
+            $diagnostic_url = ( ctype_digit( $raw_url ) ? $raw_url : esc_url_raw( $raw_url ) );
+            $diagnostic_result = Woocommerce_Pay_Per_Post_Access_Diagnostic::run( $diagnostic_email, $diagnostic_url );
         }
         require_once plugin_dir_path( __FILE__ ) . 'partials/debug.php';
     }
@@ -409,7 +469,8 @@ class Woocommerce_Pay_Per_Post_Admin {
     public function create_tools_page() {
         wp_enqueue_style( WC_PPP_SLUG . '_admin' );
         $transients = Woocommerce_Pay_Per_Post_Debug::get_transients();
-        if ( isset( $_POST['wc_ppp_create_table_nonce'] ) && wp_verify_nonce( $_POST['wc_ppp_create_table_nonce'], 'wc_ppp_create_table' ) ) {
+        // See create_debug_page(): the handler is stripped from the free build.
+        if ( isset( $_POST['wc_ppp_create_table_nonce'] ) && wp_verify_nonce( $_POST['wc_ppp_create_table_nonce'], 'wc_ppp_create_table' ) && Woocommerce_Pay_Per_Post_Helper::can_use_premium_protection() ) {
             require_once WC_PPP_PATH . '/includes/class-woocommerce-pay-per-post-activator.php';
             Woocommerce_Pay_Per_Post_Activator::create_table__premium_only();
         }
@@ -526,8 +587,9 @@ class Woocommerce_Pay_Per_Post_Admin {
         if ( !isset( $_POST[WC_PPP_SLUG . '_nonce'] ) || !wp_verify_nonce( $_POST[WC_PPP_SLUG . '_nonce'], WC_PPP_SLUG . '_nonce' ) ) {
             return;
         }
-        // Stop the script if the user does not have edit permissions.
-        if ( !current_user_can( 'edit_posts' ) ) {
+        // Stop the script if the user cannot edit THIS post. 'edit_posts' is the
+        // general capability and says nothing about the post being saved.
+        if ( !current_user_can( 'edit_post', $post_id ) ) {
             return;
         }
         if ( !isset( $_POST[WC_PPP_SLUG . '_classic_editor'] ) ) {
@@ -694,6 +756,98 @@ class Woocommerce_Pay_Per_Post_Admin {
             $message = __( 'You currently have the WooCommerce Pay for Post Debug enabled.  This can pose a performance and security risk.  Please disable if not actively debugging.', 'sample-text-domain' );
             printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
         }
+        $this->dormant_premium_protection_notice();
+    }
+
+    /**
+     * Warn when posts are configured with a protection type this install cannot
+     * apply.
+     *
+     * Delay, page-view and expire settings live in post meta and survive a
+     * licence lapsing or a move to the free build. Those posts keep working —
+     * they fall back to standard protection, so the purchase is still required
+     * — but the allowance the owner configured silently stops applying. Say so
+     * rather than letting them find out from a customer.
+     *
+     * @return void
+     */
+    protected function dormant_premium_protection_notice() {
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_premium_protection() ) {
+            return;
+        }
+        if ( !current_user_can( 'manage_options' ) ) {
+            return;
+        }
+        $affected = $this->count_posts_with_dormant_premium_protection();
+        if ( $affected < 1 ) {
+            return;
+        }
+        printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( 'notice notice-warning is-dismissible' ), esc_html( sprintf( 
+            /* translators: %d: number of affected posts. */
+            _n(
+                'Pay For Post: %d post is set to use Delay, Page View or Expiry protection, which needs an active licence. It is being protected as a standard purchase instead — visitors still have to buy the product, but the delay window, free page views and expiry are not being applied. Your settings are kept and resume if the licence is reactivated.',
+                'Pay For Post: %d posts are set to use Delay, Page View or Expiry protection, which needs an active licence. They are being protected as standard purchases instead — visitors still have to buy the product, but the delay window, free page views and expiry are not being applied. Your settings are kept and resume if the licence is reactivated.',
+                $affected,
+                'wc_pay_per_post'
+            ),
+            $affected
+         ) ) );
+    }
+
+    /**
+     * How many published posts carry premium protection meta.
+     *
+     * Cached in a transient — this runs on every admin page load, and the
+     * answer only changes when protection settings do. The transient uses the
+     * plugin's prefix so the existing Tools-page clear picks it up.
+     *
+     * @return int
+     */
+    protected function count_posts_with_dormant_premium_protection() : int {
+        $cache_key = WC_PPP_SLUG . '_dormant_premium_protection_count';
+        $cached = get_transient( $cache_key );
+        if ( false !== $cached ) {
+            return (int) $cached;
+        }
+        $post_types = get_option( WC_PPP_SLUG . '_post_types', ['post', 'page'] );
+        $query = new WP_Query([
+            'post_type'              => ( !empty( $post_types ) ? $post_types : ['post', 'page'] ),
+            'post_status'            => 'publish',
+            'posts_per_page'         => 1,
+            'fields'                 => 'ids',
+            'no_found_rows'          => false,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
+            'ignore_sticky_posts'    => true,
+            'meta_query'             => [
+                'relation' => 'AND',
+                [
+                    'key'     => WC_PPP_SLUG . '_product_ids',
+                    'compare' => 'EXISTS',
+                ],
+                [
+                    'relation' => 'OR',
+                    [
+                        'key'     => WC_PPP_SLUG . '_delay_restriction_enable',
+                        'value'   => '1',
+                        'compare' => '=',
+                    ],
+                    [
+                        'key'     => WC_PPP_SLUG . '_page_view_restriction_enable',
+                        'value'   => '1',
+                        'compare' => '=',
+                    ],
+                    [
+                        'key'     => WC_PPP_SLUG . '_expire_restriction_enable',
+                        'value'   => '1',
+                        'compare' => '=',
+                    ],
+                ],
+            ],
+        ]);
+        $count = (int) $query->found_posts;
+        set_transient( $cache_key, $count, apply_filters( 'wc_pay_per_post_posts_transient_time', DAY_IN_SECONDS ) );
+        return $count;
     }
 
 }

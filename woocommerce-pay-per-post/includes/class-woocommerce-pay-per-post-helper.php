@@ -75,6 +75,11 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
                 break;
         }
         $protection = 'standard';
+        // Mirrors get_product_ids_by_post_id(): an unlicensed install has no
+        // handler for these types, so it must report standard protection.
+        if ( !self::can_use_premium_protection() ) {
+            return $protection;
+        }
         if ( $delay_restriction_enable ) {
             $protection = 'delay';
         }
@@ -252,11 +257,50 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
                     $protected_content = self::get_posts_associated_with_product_id_interface( $posts );
                     break;
                 case "polylang":
+                    // The interface is only ever set to polylang inside the
+                    // premium block above, so the free build cannot reach this
+                    // today. Guard it anyway: the handler is stripped there, and
+                    // nothing else stops a future edit from setting the
+                    // interface outside that block.
+                    if ( !self::can_use_premium_protection() ) {
+                        $protected_content = self::get_posts_associated_with_product_id_interface( $posts );
+                        break;
+                    }
                     $protected_content = self::get_posts_associated_with_product_id_interface_polylang__premium_only( $posts );
                     break;
             }
         }
         return $protected_content;
+    }
+
+    /**
+     * Whether the premium protection types — delay, page-view and expire — may
+     * run on this install.
+     *
+     * The protection type is derived from post meta, and meta survives a
+     * downgrade. Without this gate a site that once held a licence keeps
+     * classifying posts as delay/page-view/expire after dropping to the free
+     * build, and the free build has no code left to service them: Freemius
+     * strips every `__premium_only` method from the generated free version but
+     * leaves the call sites intact, so `check_if_has_access()` reaches a
+     * `Call to undefined method` fatal. Because `the_content` runs on archives
+     * too, one such post takes down every page that lists it.
+     *
+     * The `is__premium_only()` nesting is deliberate, and is the opposite of
+     * the choice made in `get_last_purchase_date()`. Freemius deletes the body
+     * of these blocks, so in the free build this method reduces to a bare
+     * `return false;` — which is exactly what is wanted here. A guard that has
+     * to *survive* stripping must use `can_use_premium_code()` alone. See
+     * `.claude/RELEASE_PROCESS.md`, "Freemius stripping".
+     *
+     * Unlicensed installs fall back to standard protection: the post stays
+     * locked and access still requires the purchase. Falling back to
+     * unprotected would publish paid content the moment a licence lapsed.
+     *
+     * @return bool True when delay/page-view/expire protection may be applied.
+     */
+    public static function can_use_premium_protection() : bool {
+        return false;
     }
 
     public static function can_use_woocommerce_memberships() : bool {
@@ -631,19 +675,26 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
         if ( is_array( $standard_product_ids ) && count( $standard_product_ids ) > 0 && !empty( $standard_product_ids[0] ) ) {
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::get_product_ids_by_post_id() Product IDs $selected array contains items' );
             $is_protected = true;
-            if ( $delay_restriction_enable ) {
+            // Without a licence the delay/page-view/expire handlers do not
+            // exist in the build, so the post must not be classified into one.
+            // See can_use_premium_protection().
+            $can_use_premium_protection = self::can_use_premium_protection();
+            if ( $delay_restriction_enable && $can_use_premium_protection ) {
                 $protection_type = 'delay';
                 Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::get_product_ids_by_post_id() Protection Type: DELAY' );
             } else {
-                if ( $page_view_restriction_enable ) {
+                if ( $page_view_restriction_enable && $can_use_premium_protection ) {
                     $protection_type = 'page-view';
                     Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::get_product_ids_by_post_id() Protection Type: PAGE VIEW' );
                 } else {
-                    if ( $expire_restriction_enable ) {
+                    if ( $expire_restriction_enable && $can_use_premium_protection ) {
                         $protection_type = 'expire';
                         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::get_product_ids_by_post_id() Protection Type: EXPIRE' );
                     } else {
                         $protection_type = 'standard';
+                        if ( !$can_use_premium_protection && ($delay_restriction_enable || $page_view_restriction_enable || $expire_restriction_enable) ) {
+                            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::get_product_ids_by_post_id() Premium protection configured but no licence — falling back to STANDARD' );
+                        }
                         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::get_product_ids_by_post_id() Protection Type: STANDARD' );
                     }
                 }

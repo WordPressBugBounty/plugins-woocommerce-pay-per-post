@@ -78,6 +78,38 @@
 		 *
 		 * @return bool
 		 */
+		/**
+		 * Per-request cache of subscription lookups, keyed "userId:productId".
+		 *
+		 * can_user_view_content() runs every registered check on every
+		 * evaluation, so is_subscriber() is consulted even for posts that
+		 * contain no subscription products at all. Each miss calls
+		 * wcs_user_has_subscription(), and WooCommerce Subscriptions answers it
+		 * by querying the orders table — plus whatever else hooks in; on a store
+		 * with Subscriptions Gifting, WCSG_Recipient_Management adds a second
+		 * query per call.
+		 *
+		 * Measured on a product page rendering 60 unlocked posts, all protected
+		 * by the same product: 64 identical subscription queries per render, and
+		 * they dominated the page. The (user, product) pair repeats constantly,
+		 * so caching it collapses them to one.
+		 *
+		 * Request-scoped only. flush_subscription_cache() clears it when a
+		 * subscription changes state mid-request.
+		 *
+		 * @var array<string, bool>
+		 */
+		private static array $subscription_cache = [];
+
+		/**
+		 * Drop the per-request subscription cache.
+		 *
+		 * @return void
+		 */
+		public static function flush_subscription_cache() {
+			self::$subscription_cache = [];
+		}
+
 		public function is_subscriber( $post_id = null, $product_ids = null ): bool {
 			if ( ! function_exists( 'wcs_user_has_subscription' ) ) {
 				return false;
@@ -96,7 +128,13 @@
 
 			if ( ! empty( $product_ids ) ):
 				foreach ( (array) $product_ids as $id ) {
-					if ( wcs_user_has_subscription( $current_user->ID, $id, [ 'active', 'pending-cancel' ] ) ) {
+					$cache_key = $current_user->ID . ':' . $id;
+
+					if ( ! isset( self::$subscription_cache[ $cache_key ] ) ) {
+						self::$subscription_cache[ $cache_key ] = wcs_user_has_subscription( $current_user->ID, $id, [ 'active', 'pending-cancel' ] );
+					}
+
+					if ( self::$subscription_cache[ $cache_key ] ) {
 						Woocommerce_Pay_Per_Post_Helper::logger( 'IS AN ACTIVE SUBSCRIBER OF  - ' . trim( $id ) );
 
 						return true;

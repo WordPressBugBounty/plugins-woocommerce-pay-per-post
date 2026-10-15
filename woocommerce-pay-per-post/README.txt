@@ -4,12 +4,12 @@ Tags: woocommerce, payforpost, pay for post, sell content,
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mattpram%40gmail%2ecom
 Requires at least: 3.8
 Requires PHP: 7.4
-Tested up to: 7.0.2
-Stable tag: 3.2.34
+Tested up to: 7.1
+Stable tag: 3.2.35
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Sell Pages/Posts through WooCommerce 2.6+ quickly and easily. Tested up to WooCommerce Version 10.9.x
+Sell Pages/Posts through WooCommerce 2.6+ quickly and easily. Tested up to WooCommerce Version 11.2.x
 
 == Description ==
 Quickly and easily sell access to pages, posts and custom post types through WooCommerce with Pay For Post with WooCommerce.  I originally created this plugin because I looked everywhere, and I couldn't find a plugin already out there, free or premium, that would do the simple fact of selling access to a particular page or post through WooCommerce.  So I decided to write my own.
@@ -57,7 +57,7 @@ You can view a front-end demo by going to [https://demo.pramadillo.com](https://
 * **PREMIUM ONLY** PolyLang Multiple Language support
 * **PREMIUM ONLY** Priority Support
 * **PREMIUM ONLY** Woo Memberships Support!
-* **PREMIUM ONLY** Woo Subscriptions Support!
+* **PREMIUM ONLY** Woo Subscriptions Support! (Simple and Variable subscription product types. Products sold through WooCommerce Subscriptions 9.0+ subscription plans are not yet recognised as subscriptions; support is planned for the next release.)
 * **PREMIUM ONLY** Easily access all protected content and which users purchased them
 * **PREMIUM ONLY** Automatically add a lock icon to all protected posts
 * **PREMIUM ONLY** Show a list of content that gets unlocked by purchased product on product page.
@@ -109,6 +109,12 @@ Another thing you can try is to set the number of columns on the shortcode to di
 
 Yes, this plugin worked with all custom post types.  In the settings you can add and remove which post types you would like the metabox to show up on.
 
+= Does this work with WooCommerce Subscriptions 9.0 subscription plans? =
+
+Not yet. WooCommerce Subscriptions 9.0 added subscription plans, which let any product be sold one-time, as a subscription, or both, and turned the classic "Simple subscription" and "Variable subscription" product types off by default on new stores. Pay For Post currently recognises a subscription by those classic product types. A product sold through a subscription plan is treated as an ordinary purchase: it unlocks the page, but the subscription's status is not checked, so cancelling it does not remove access.
+
+If you rely on subscription status to control access, use the classic subscription product types for now. They can be re-enabled under WooCommerce > Settings > Subscriptions > Subscription product creation. Subscription plan support is planned for the next release.
+
 = How do you link to your post after an order has been placed? =
 
 Use the premium version. :) The premium version handles this for you.  However, if you are using the free version what I have done in the past is use the Order Notes for the product in WooCommerce. So what will happen is after they purchase, on the Payment Received page they will see the order notes, and they will get sent in the receipt also.
@@ -136,6 +142,25 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 
 
 == Changelog ==
+
+=3.2.35=
+* SECURITY - General security hardening.
+* BUG FIX - Fixed a fatal error on the free version for any post configured with Delay, Page View or Expiry protection, typically settings left over from a premium licence that has since lapsed. Because the check runs through the_content, one such post took down every archive page listing it, for every visitor. Those posts now fall back to standard protection: still locked, purchase still required. The delay window, page-view allowance and expiry are simply not applied. Settings are untouched and resume if a licence is reactivated. An admin notice reports how many posts are affected.
+* BUG FIX - The block editor bundle was served with no version number and no declared dependencies, so a browser or CDN holding an older copy had no reason to fetch an updated one, and editor packages could load in the wrong order. Both now come from the build manifest.
+* BUG FIX - The block editor sidebar was built on an API WordPress deprecated in 6.6. It now uses the current API with a fallback for older WordPress, so the protection panel keeps working when the old one is removed.
+* BUG FIX (PREMIUM) - On sites using High-Performance Order Storage, Expiry and Page View protection could measure a customer's access window from an older order than the one they had most recently placed. Sites on legacy order storage were unaffected.
+* BUG FIX - Removed the false "you must enable custom field support" warning for custom post types that already had it enabled. The check ran before most post types were registered. Reported with Custom Post Type UI; it affected nearly every custom post type.
+* NEW - Access Diagnostic on the Debug page. Enter a customer's email address and the URL of the page they cannot open, and the plugin reports whether they have access and why: which products protect the page, which of them the customer bought, every order containing a required product and why each did or did not count, products they bought that do NOT unlock the page, and when access expires or how many page views remain. It runs the real protection engine as that customer, so its answer cannot differ from what the customer sees, and it never consumes a page view. A plain-text developer export with no personal data is included for support replies. It also flags configurations known to cause tickets: guest checkout enabled, protection disabled site-wide by the wcppp_is_active filter, and a WooCommerce Subscriptions compatibility layer supplying the subscription classes.
+* NEW - Admin notice when posts are configured for Delay, Page View or Expiry protection on an install that cannot apply them.
+* NEW - wc_pay_per_post_is_admin_call filter. Receives the is_admin() result and the post ID, and decides whether the protection engine takes its admin shortcut (which grants access to everything). Lets tools evaluate access from wp-admin and still get the front-end answer.
+* NEW - Woocommerce_Pay_Per_Post_Helper::can_use_premium_protection(), the single gate for whether premium protection types may be applied.
+* ENHANCEMENT (PREMIUM) - Subscription lookups are cached for the duration of a request. On a product page listing 60 unlocked posts this took database queries from 69 to 6. The cache is cleared when a subscription changes status.
+* ENHANCEMENT - The block editor bundle is now built in production mode: 466 KB down to 97 KB, no functional change.
+* UPDATE - Updated Freemius SDK to the latest version
+* UPDATE - Tested up to WordPress 7.1
+* UPDATE - Tested up to WooCommerce 11.2.1
+* UPDATE (PREMIUM) - Tested with Elementor 4.3.4 and Elementor Pro 4.3.1
+* KNOWN LIMITATION (PREMIUM) - WooCommerce Subscriptions 9.0+ can sell any product on a subscription plan, and its classic Simple/Variable subscription product types are off by default on new stores. Pay For Post recognises subscriptions by the classic product types only. A product sold through a subscription plan still unlocks the page, but its subscription status is not checked, so cancelling does not remove access. Stores using the classic product types are unaffected. Subscription plan support is planned for the next release.
 
 =3.2.34=
 * BUG FIX (PREMIUM) - Fixed expire protection reloading a page over and over. The countdown that ends timed access on an open page was scheduled even when the expiry had already passed while the visitor could still see the content, so the page reloaded roughly once a second. Timed access that is genuinely still running is unaffected and still ends on the page the visitor is on.
@@ -825,6 +850,9 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 * Initial Release
 
 == Upgrade Notice ==
+
+= 3.2.35 =
+Security hardening, plus a fix for a fatal error on the free version. Behaviour changes: without a premium licence, Delay, Page View and Expiry posts fall back to standard protection (expiry is not enforced); on HPOS sites, Expiry and Page View measure from the most recent qualifying order.
 
 = 3.2.34 =
 Behaviour change for Page View Restriction (premium): the configured number of views is now exact. Posts previously served one view more than configured, so customers on those posts get one fewer free view after updating. To keep the old behaviour, add: add_filter( 'wc_pay_per_post_enable_pageview_fix', '__return_false' );

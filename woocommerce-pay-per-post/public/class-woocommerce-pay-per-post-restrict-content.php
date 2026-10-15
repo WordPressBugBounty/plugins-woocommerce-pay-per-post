@@ -89,9 +89,25 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
     | We loop through each one and test
     |
     */
+    /**
+     * Whether this evaluation is happening inside wp-admin.
+     *
+     * A true answer short-circuits can_user_view_content() to "has access", so
+     * anything running in wp-admin sees protected content. That is correct for
+     * normal admin screens, and fatal for the access diagnostic, which runs on
+     * the Debug page and would otherwise report that every customer has access
+     * to everything.
+     *
+     * The filter lets a caller that is deliberately simulating a front-end
+     * request say so. It is not a way to grant access — returning false only
+     * removes the shortcut, leaving every real check to run.
+     *
+     * @return bool
+     */
     public function check_if_admin_call() : bool {
         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_admin_call  - BACKTRACE - Called From - ' . print_r( debug_backtrace()[1]['function'], true ) );
-        if ( is_admin() || !$this->post_id ) {
+        $is_admin_call = (bool) apply_filters( 'wc_pay_per_post_is_admin_call', is_admin(), $this->post_id );
+        if ( $is_admin_call || !$this->post_id ) {
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_admin_call  - Is an admin call' );
             return true;
         }
@@ -186,9 +202,15 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
                 return $this->check_if_purchased();
             case 'page-view':
                 Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_has_access  - Protection Type is Page View Protection' );
+                if ( !Woocommerce_Pay_Per_Post_Helper::can_use_premium_protection() ) {
+                    return $this->fall_back_to_standard_protection( 'page-view' );
+                }
                 return $this->has_access_page_view_protection__premium_only();
             case 'expire':
                 Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_has_access  - Protection Type is Expiration Protection' );
+                if ( !Woocommerce_Pay_Per_Post_Helper::can_use_premium_protection() ) {
+                    return $this->fall_back_to_standard_protection( 'expire' );
+                }
                 return $this->has_access_expiry_protection__premium_only();
         }
         return true;
@@ -274,9 +296,38 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
             case 'expire':
                 return true;
             case 'delay':
+                if ( !Woocommerce_Pay_Per_Post_Helper::can_use_premium_protection() ) {
+                    // Standard protection always shows the paywall to a user
+                    // who has not purchased; the delay window is what premium
+                    // adds. Without it, show the paywall straight away.
+                    Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_should_show_paywall  - Delay protection unavailable without a licence, showing paywall' );
+                    return true;
+                }
                 return $this->enable_delay_protection_paywall__premium_only();
         }
         return true;
+    }
+
+    /**
+     * Answer a premium protection type as though it were standard protection.
+     *
+     * Reached when a post carries delay/page-view/expire meta on an install
+     * that cannot run those types — typically one that held a licence when the
+     * post was configured and no longer does. The meta is left alone so the
+     * original configuration resumes if a licence is restored.
+     *
+     * Standard is the safe direction: access still requires the purchase, so
+     * no paid content is exposed. What is lost is the allowance premium would
+     * have granted — free page views, or the delay window — and expiry stops
+     * being enforced, which can only widen access for someone who already paid.
+     *
+     * @param string $protection_type The configured type, for the log only.
+     *
+     * @return bool Whether the user may view the content.
+     */
+    protected function fall_back_to_standard_protection( string $protection_type ) : bool {
+        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/fall_back_to_standard_protection  - ' . $protection_type . ' protection is configured but unavailable without a licence, falling back to standard protection' );
+        return $this->check_if_purchased();
     }
 
     /**
@@ -350,7 +401,22 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
         return $unfiltered_content;
     }
 
+    /**
+     * Whether expiry protection has lapsed for the given post.
+     *
+     * Public, and reachable from theme and shortcode code, so it needs its own
+     * guard rather than relying on the protection type being classified
+     * correctly upstream.
+     *
+     * @param int $post_id Post to check.
+     *
+     * @return bool True when access has expired. Always false without a
+     *              licence, where expiry is not enforced at all.
+     */
     public function is_expired( $post_id ) : bool {
+        if ( !Woocommerce_Pay_Per_Post_Helper::can_use_premium_protection() ) {
+            return false;
+        }
         return !$this->has_access_expiry_protection__premium_only( $post_id );
     }
 

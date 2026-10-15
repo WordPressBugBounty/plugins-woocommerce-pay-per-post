@@ -78,6 +78,7 @@ class Woocommerce_Pay_Per_Post {
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-woocommerce-pay-per-post-admin.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-woocommerce-pay-per-post-debug.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-woocommerce-pay-per-post-tools.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-woocommerce-pay-per-post-access-diagnostic.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'integrations/woocommerce/WooCommerce.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-woocommerce-pay-per-post-public.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-woocommerce-pay-per-post-restrict-content.php';

@@ -5,7 +5,10 @@ class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Pos
         $post_id_str = 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_admin_call  - IS ';
         $log_str = $post_id_str . (( is_admin() ? 'an Admin Call' : 'NOT an Admin Call' ));
         Woocommerce_Pay_Per_Post_Helper::logger( $log_str );
-        return is_admin();
+        // See the note on Restrict_Content::check_if_admin_call(). The
+        // element-level path needs the same escape hatch, or the access
+        // diagnostic would report every element as visible to everyone.
+        return (bool) apply_filters( 'wc_pay_per_post_is_admin_call', is_admin(), $post_id );
     }
 
     public static function check_if_admin_user_have_access( $post_id, $product_ids ) : bool {
