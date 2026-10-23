@@ -19,22 +19,34 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
     ];
 
     public static function is_protected( $post_id = null ) : array {
-        global $product_ids;
         if ( is_null( $post_id ) ) {
             $post_id = get_the_ID();
         }
         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::is_protected() is called' );
-        if ( isset( $product_ids['is_protected'] ) && !empty( $product_ids['is_protected'] ) ) {
-            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::is_protected() Global Product IDs set' );
-            return [
-                'is_protected'    => $product_ids['is_protected'],
-                'origin_type'     => $product_ids['origin_type'],
-                'protection_type' => $product_ids['protection_type'],
-            ];
-        } else {
-            Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::is_protected() Global Product IDs NOT SET pulling product_ids from Woocommerce_Pay_Per_Post_Helper::get_product_ids_by_post_id()' );
-            return self::get_product_ids_by_post_id( $post_id );
+        return self::get_post_protection( $post_id );
+    }
+
+    /**
+     * A post's protection, as get_product_ids_by_post_id() returns it.
+     *
+     * set_product_ids() computes it on template_redirect for the post the
+     * request is for, and keeps it in the global $product_ids. The global
+     * answers for that post only: a listing renders other posts in the same
+     * request, and a REST API or admin-ajax.php request has no global at all.
+     *
+     * @param int|null $post_id Defaults to the current post.
+     *
+     * @return array
+     */
+    public static function get_post_protection( $post_id = null ) : array {
+        global $product_ids;
+        if ( is_null( $post_id ) ) {
+            $post_id = get_the_ID();
         }
+        if ( isset( $product_ids['post_id'] ) && (int) $product_ids['post_id'] === (int) $post_id ) {
+            return $product_ids;
+        }
+        return self::get_product_ids_by_post_id( $post_id );
     }
 
     /**
@@ -643,6 +655,7 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
                 'is_protected'        => false,
                 'origin_type'         => '',
                 'protection_type'     => '',
+                'post_id'             => (int) $post_id,
             ];
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::get_product_ids_by_post_id() NOT in Protected Post Types Array.  Bailing.' );
             return $product_ids;
@@ -655,6 +668,7 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
                     'is_protected'        => false,
                     'origin_type'         => '',
                     'protection_type'     => '',
+                    'post_id'             => (int) $post_id,
                 ];
                 Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::get_product_ids_by_post_id() In Elementor Edit/Preview Mode.  Bailing.' );
                 return $product_ids;
@@ -707,6 +721,7 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
             'is_protected'        => $is_protected,
             'origin_type'         => $origin_type,
             'protection_type'     => $protection_type,
+            'post_id'             => (int) $post_id,
         ];
         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Helper::get_product_ids_by_post_id() Returned Product IDs array', $return );
         return $return;
@@ -720,29 +735,35 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
         return OrderUtil::custom_orders_table_usage_is_enabled();
     }
 
-    public static function is_admin_request() {
-        $current_url = home_url( add_query_arg( null, null ) );
-        $admin_url = strtolower( admin_url() );
-        $referrer = strtolower( wp_get_referer() );
-        $prefix = rest_get_url_prefix();
-        $is_rest = defined( 'REST_REQUEST' ) && REST_REQUEST || isset( $_GET['rest_route'] ) && strpos( trim( $_GET['rest_route'], '\\/' ), $prefix ) === 0 || strpos( wp_parse_url( trailingslashit( rest_url() ) )['path'], wp_parse_url( add_query_arg( [] ) )['path'] ) === 0;
-        $requestFromBackend = $is_rest && strpos( $admin_url, '/wp-admin/' ) > 0 && !strpos( $admin_url, '/wp-admin/admin-ajax.php' );
-        if ( $requestFromBackend ) {
-            return true;
-        }
-        if ( 0 === strpos( $current_url, $admin_url ) ) {
-            if ( 0 === strpos( $referrer, $admin_url ) ) {
-                return true;
-            } else {
-                if ( function_exists( 'wp_doing_ajax' ) ) {
-                    return wp_doing_ajax();
-                } else {
-                    return !(defined( 'DOING_AJAX' ) && DOING_AJAX);
-                }
-            }
-        } else {
+    /**
+     * Whether a request for $post_id counts as wp-admin, where the paywall is not
+     * applied.
+     *
+     * is_admin() is true for every admin-ajax.php request, logged in or not, and
+     * themes and plugins load posts for visitors over it (load more, infinite
+     * scroll, quick view). So an AJAX request counts only for a user who can edit
+     * the post, as when a page builder renders its editor preview. REST requests
+     * never count.
+     *
+     * @param int|null $post_id
+     *
+     * @return bool
+     */
+    public static function is_wp_admin_request( $post_id ) : bool {
+        if ( !is_admin() ) {
             return false;
         }
+        $doing_ajax = ( function_exists( 'wp_doing_ajax' ) ? wp_doing_ajax() : defined( 'DOING_AJAX' ) && DOING_AJAX );
+        return !$doing_ajax || $post_id && current_user_can( 'edit_post', $post_id );
+    }
+
+    /**
+     * @return bool
+     * @deprecated 3.3.0 Use Woocommerce_Pay_Per_Post_Helper::is_wp_admin_request(). The plugin no longer calls this.
+     */
+    public static function is_admin_request() {
+        _deprecated_function( __METHOD__, '3.3.0', 'Woocommerce_Pay_Per_Post_Helper::is_wp_admin_request()' );
+        return self::is_wp_admin_request( get_the_ID() );
     }
 
     public static function get_last_purchase_date( $post_id, $user_id = null ) {

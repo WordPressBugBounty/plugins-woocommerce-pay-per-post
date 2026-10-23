@@ -77,8 +77,10 @@ class Woocommerce_Pay_Per_Post_Public {
      * @return mixed|string
      */
     public function restrict_content( $unfiltered_content ) {
-        //If request coming from admin area, i.e. block editor then pass back original content.
-        if ( Woocommerce_Pay_Per_Post_Helper::is_admin_request() && !is_home() ) {
+        // Only wp-admin requests get the original content here, and admin-ajax.php
+        // only for a user who can edit the post. REST API requests, the block
+        // editor's among them, run the checks below like any front-end request.
+        if ( Woocommerce_Pay_Per_Post_Helper::is_wp_admin_request( get_the_ID() ) ) {
             return $unfiltered_content;
         }
         $post_id = get_the_ID();

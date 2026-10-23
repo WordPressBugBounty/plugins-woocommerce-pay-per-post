@@ -33,12 +33,11 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
     protected $available_templates;
 
     public final function __construct( $post_id = null, $should_track_pageview = true ) {
-        global $product_ids;
-        $this->product_ids = $product_ids;
         $this->should_track_pageview = $should_track_pageview;
         //The Post ID is null because we use this class for displaying shortcodes as well as within the loop
         if ( is_null( $post_id ) ) {
             $this->post_id = get_the_ID();
+            $this->product_ids = Woocommerce_Pay_Per_Post_Helper::get_post_protection( $this->post_id );
         } else {
             $this->post_id = $post_id;
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/__construct  POST ID Passed in, populating product_ids from get_product_ids_by_post_id();' );
@@ -96,7 +95,8 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
      * anything running in wp-admin sees protected content. That is correct for
      * normal admin screens, and fatal for the access diagnostic, which runs on
      * the Debug page and would otherwise report that every customer has access
-     * to everything.
+     * to everything. admin-ajax.php counts only for a user who can edit the post:
+     * see Woocommerce_Pay_Per_Post_Helper::is_wp_admin_request().
      *
      * The filter lets a caller that is deliberately simulating a front-end
      * request say so. It is not a way to grant access — returning false only
@@ -106,7 +106,7 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
      */
     public function check_if_admin_call() : bool {
         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_admin_call  - BACKTRACE - Called From - ' . print_r( debug_backtrace()[1]['function'], true ) );
-        $is_admin_call = (bool) apply_filters( 'wc_pay_per_post_is_admin_call', is_admin(), $this->post_id );
+        $is_admin_call = (bool) apply_filters( 'wc_pay_per_post_is_admin_call', Woocommerce_Pay_Per_Post_Helper::is_wp_admin_request( $this->post_id ), $this->post_id );
         if ( $is_admin_call || !$this->post_id ) {
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_admin_call  - Is an admin call' );
             return true;
@@ -158,8 +158,20 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
             $id = trim( $id );
             // ID sanitization
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - Checking product ID: ' . $id );
+            $subscriptions = ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && isset( $this->integrations['woocommerce-subscriptions'] ) ? $this->integrations['woocommerce-subscriptions'] : null );
+            // Sold on subscription plans (WCS 9.0+): a one-time purchase counts, a
+            // plan purchase only while its subscription is active. Asked before the
+            // subscription-type check, which can misreport these products.
+            if ( $subscriptions && $subscriptions->is_plan_product( $id ) ) {
+                if ( $subscriptions->has_plan_product_access( $this->current_user, $id ) ) {
+                    Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - User has access through subscription plan product ID: ' . $id );
+                    return true;
+                }
+                Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_purchased - Subscription plan product ID: ' . $id . ' - no active subscription and no one-time purchase, skipping' );
+                continue;
+            }
             // Check if this is a subscription product
-            $is_subscription_product = Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && isset( $this->integrations['woocommerce-subscriptions'] ) && $this->integrations['woocommerce-subscriptions']->is_subscription_product( $id );
+            $is_subscription_product = $subscriptions && $subscriptions->is_subscription_product( $id );
             // Check for subscription product - must have active subscription
             if ( $is_subscription_product ) {
                 if ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $this->current_user->user_email, $this->current_user->ID, $id ) && $this->check_if_is_subscriber() ) {
@@ -376,7 +388,9 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
      */
     public function show_content( $unfiltered_content ) : string {
         $show_warnings = get_post_meta( $this->post_id, WC_PPP_SLUG . '_show_warnings', true );
-        if ( 'expire' === $this->protection_type && !is_admin() && !$this->check_if_admin_user_have_access() && apply_filters( 'wc_pay_per_post_enable_javascript_expiration_refresh', true ) ) {
+        // countdown_refresh() prints a <script>, which in a REST response would
+        // land in front of the JSON and break it.
+        if ( 'expire' === $this->protection_type && !is_admin() && !(defined( 'REST_REQUEST' ) && REST_REQUEST) && !$this->check_if_admin_user_have_access() && apply_filters( 'wc_pay_per_post_enable_javascript_expiration_refresh', true ) ) {
             $this->countdown_refresh();
         }
         if ( $show_warnings && !is_admin() ) {
@@ -445,7 +459,6 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
      * @return string
      */
     protected function get_paywall_content( $unfiltered_content ) : string {
-        global $product_ids;
         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/get_paywall_content  - has been called.' );
         // Checks if Divi or Beaver are on edit mode
         $is_frontend_edit = !empty( $_GET['et_fb'] ) || isset( $_GET['fl_builder'] );
@@ -472,9 +485,9 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
             1
         );
         $paywall_content = ( empty( $override_paywall_content ) ? $default_paywall_content : $override_paywall_content );
-        if ( isset( $product_ids['product_ids'] ) ) {
+        if ( isset( $this->product_ids['product_ids'] ) ) {
             //TODO add filter to remove do_shortcode
-            return wpautop( do_shortcode( Woocommerce_Pay_Per_Post_Helper::replace_tokens( $paywall_content, $product_ids['product_ids'], $unfiltered_content ) ) );
+            return wpautop( do_shortcode( Woocommerce_Pay_Per_Post_Helper::replace_tokens( $paywall_content, $this->product_ids['product_ids'], $unfiltered_content ) ) );
         }
         return wpautop( do_shortcode( $paywall_content ) );
     }

@@ -5,7 +5,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mattp
 Requires at least: 3.8
 Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 3.2.35
+Stable tag: 3.3.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -57,7 +57,7 @@ You can view a front-end demo by going to [https://demo.pramadillo.com](https://
 * **PREMIUM ONLY** PolyLang Multiple Language support
 * **PREMIUM ONLY** Priority Support
 * **PREMIUM ONLY** Woo Memberships Support!
-* **PREMIUM ONLY** Woo Subscriptions Support! (Simple and Variable subscription product types. Products sold through WooCommerce Subscriptions 9.0+ subscription plans are not yet recognised as subscriptions; support is planned for the next release.)
+* **PREMIUM ONLY** Woo Subscriptions Support! (Simple and Variable subscription product types, and products sold on WooCommerce Subscriptions 9.0+ subscription plans)
 * **PREMIUM ONLY** Easily access all protected content and which users purchased them
 * **PREMIUM ONLY** Automatically add a lock icon to all protected posts
 * **PREMIUM ONLY** Show a list of content that gets unlocked by purchased product on product page.
@@ -111,9 +111,9 @@ Yes, this plugin worked with all custom post types.  In the settings you can add
 
 = Does this work with WooCommerce Subscriptions 9.0 subscription plans? =
 
-Not yet. WooCommerce Subscriptions 9.0 added subscription plans, which let any product be sold one-time, as a subscription, or both, and turned the classic "Simple subscription" and "Variable subscription" product types off by default on new stores. Pay For Post currently recognises a subscription by those classic product types. A product sold through a subscription plan is treated as an ordinary purchase: it unlocks the page, but the subscription's status is not checked, so cancelling it does not remove access.
+Yes, in the premium version. WooCommerce Subscriptions 9.0 added subscription plans, which let any product be sold one-time, on a subscription, or both. Pay For Post decides by how the customer bought it. A customer who bought the product one-time has access permanently, like any ordinary purchase. A customer who bought it on a plan has access while that subscription is active or pending cancellation. When it is cancelled, expires or goes on hold, access ends, unless they also bought the product one-time.
 
-If you rely on subscription status to control access, use the classic subscription product types for now. They can be re-enabled under WooCommerce > Settings > Subscriptions > Subscription product creation. Subscription plan support is planned for the next release.
+The classic "Simple subscription" and "Variable subscription" product types work as before.
 
 = How do you link to your post after an order has been placed? =
 
@@ -142,6 +142,25 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 
 
 == Changelog ==
+
+=3.3.0=
+* SECURITY - General security hardening.
+* BUG FIX - Fixed a block editor save removing a post's protection. A post protected in the classic editor, through the meta box with Block Editor Integration off, by an import, or before the block editor sidebar existed lost all its products, and so became free to read, the first time it was saved in the block editor, even if only the title changed. A post whose sidebar settings were left over from an earlier edit went back to those settings instead. Sidebar settings are now applied only when they were changed.
+* BUG FIX - The block editor sidebar now shows a post's products as selected when an import or other code stored their IDs as numbers. They appeared unselected, and the next change made in the sidebar removed them.
+* BUG FIX - Fixed content lists, including the My Account Purchased Content tab, showing another list's posts for up to an hour. Lists that differed only in their product_ids attribute or in a wc_pay_per_post_args filter shared one cached result. A wc_pay_per_post_args filter now takes effect immediately.
+* BUG FIX - The Access Diagnostic's purchase history now counts the same orders as the access check. It marked orders with no paid date as not counting, such as Cash on Delivery orders that have not been completed, and did the same to guest orders and orders on another account placed under the customer's email address, so a report could say the customer has access while none of their orders counted. On Expiry and Page View pages it now names the order the access window is measured from, and says when that order has no paid date.
+* BUG FIX (PREMIUM) - A cancelled, expired or on-hold subscription bought through a WooCommerce Subscriptions plan kept access to protected content. After updating, those customers see the paywall. Stores using the classic subscription product types are unaffected.
+* BUG FIX (PREMIUM) - Fixed a fatal error on the My Account Purchased Content tab when Polylang support is enabled.
+* BUG FIX (PREMIUM) - Fixed a fatal error in the purchased-datatables list for any customer who had made a purchase. With Polylang support enabled it now keeps its table.
+* BUG FIX (PREMIUM) - Purchased content lists no longer report posts with Expiry protection as expired while access is still valid. Only templates customised to show $post->expiration_status were affected.
+* BUG FIX (PREMIUM) - The inline shortcode's paywall_message now offers the products that unlock the post the region is in, and its {{add_to_cart_link}} placeholder renders an add-to-cart link for each product. It rendered nothing before.
+* NEW (PREMIUM) - Support for WooCommerce Subscriptions 9.0+ subscription plans. A product sold on plans unlocks content when the customer bought it one-time, or while they hold an active or pending-cancel subscription containing it. Classic subscription product types are unchanged.
+* NEW (PREMIUM) - The Access Diagnostic explains a lapsed subscription plan instead of reporting that the customer never bought the product.
+* NEW (PREMIUM) - wc_pay_per_post_is_subscription_plan_product filter. Return false to treat a product as an ordinary product, or true to keep the plan rule for a product whose plans were removed.
+* NEW (PREMIUM) - Sort order for the Purchased Content tab on the WooCommerce My Account page. Under Settings > General Options, choose Title A–Z, Title Z–A, Newest published first, Oldest published first or Menu order for both lists on the tab. Newest published first remains the default, so nothing changes until you pick another order.
+* NEW (PREMIUM) - wc_pay_per_post_my_account_shortcode_atts filter. Receives the shortcode attributes for each section of the Purchased Content tab and the section (has_access or purchased).
+* NEW - wc_pay_per_post_shortcode_posts filter. Receives the list a [woocommerce-payperpost] template is about to render, already filtered and sorted, plus the template and the shortcode attributes.
+* ENHANCEMENT (PREMIUM) - orderby="title" on the [woocommerce-payperpost] shortcode now sorts titles naturally, so "Lesson 2" comes before "Lesson 10".
 
 =3.2.35=
 * SECURITY - General security hardening.
@@ -850,6 +869,9 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 * Initial Release
 
 == Upgrade Notice ==
+
+= 3.3.0 =
+Security hardening, and a fix for block editor saves that could remove a post's protection: check protected posts you have saved in the block editor, as protection already lost is not restored. Premium: customers whose WooCommerce Subscriptions plan subscription has lapsed now lose access.
 
 = 3.2.35 =
 Security hardening, plus a fix for a fatal error on the free version. Behaviour changes: without a premium licence, Delay, Page View and Expiry posts fall back to standard protection (expiry is not enforced); on HPOS sites, Expiry and Page View measure from the most recent qualifying order.

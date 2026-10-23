@@ -13,17 +13,25 @@ if ( count( $purchased ) > 0 ) {
     foreach ( $purchased as $post ) {
         /** @noinspection PhpUndefinedFunctionInspection */
         $languages = pll_get_post_translations( $post->ID );
+        // A post with no translation in the current language is listed as
+        // itself. Looking that translation up gave null, and
+        // get_permalink( null ) links to the page the list is on.
+        $display_id = $languages[$current_language] ?? $post->ID;
+        $display_language = array_search( $display_id, $languages );
         ?>
                 <li>
                     <strong><a href="<?php 
-        echo esc_url( get_permalink( $languages[$current_language] ) );
-        ?>">[<?php 
-        echo $current_language;
-        ?>] <?php 
-        echo esc_html( get_the_title( $languages[$current_language] ) );
+        echo esc_url( get_permalink( $display_id ) );
+        ?>"><?php 
+        if ( $display_language ) {
+            ?>[<?php 
+            echo esc_html( $display_language );
+            ?>] <?php 
+        }
+        echo esc_html( get_the_title( $display_id ) );
         ?></a></strong><br>
                     <?php 
-        if ( $languages > 1 ) {
+        if ( count( $languages ) > 1 ) {
             ?>
                     <?php 
             apply_filters( 'wc_pay_per_post_languages_title', esc_html__( 'Additional Languages', 'wc_pay_per_post' ) );
@@ -31,7 +39,7 @@ if ( count( $purchased ) > 0 ) {
                     <ul>
 	                    <?php 
             foreach ( $languages as $language => $post_id ) {
-                if ( $language === $current_language ) {
+                if ( (int) $post_id === (int) $display_id ) {
                     continue;
                 }
                 ?>

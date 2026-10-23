@@ -95,23 +95,84 @@ class Woocommerce_Pay_Per_Post_Admin {
         echo '<div class="notice notice-error is-dismissible"><p>' . $message . '</p></div>';
     }
 
+    /**
+     * Save the protection settings from the block editor.
+     *
+     * The block editor saves the post over REST, then posts this plugin's meta
+     * box (admin/partials/meta-box.php) to post.php?meta-box-loader=1, which
+     * reaches this method through save_meta_box(). The Pay For Post sidebar puts
+     * its settings in that meta box's `wc_pay_per_post_document_settings` field,
+     * and only when one of its controls changes. An empty field means the sidebar
+     * was not touched, so the post's protection is left as it is.
+     *
+     * This used to rebuild the protection from the `_ppp_document_settings_meta`
+     * post meta on every block editor save. The sidebar writes that meta only on a
+     * change too, so a post protected any other way — the classic editor, the
+     * meta box with Block Editor Integration off, an import, or before the sidebar
+     * existed — lost all its products on its first block editor save, even one
+     * that only fixed the title. A post with meta left over from an earlier
+     * sidebar edit went back to those settings instead. A stored value cannot
+     * tell a change made in this save from one made months ago; the posted field
+     * can.
+     *
+     * @param int $post_id The post being saved.
+     */
     public function edit_post_block_editor( $post_id ) {
-        $ppp_document_settings_meta = get_post_meta( $post_id, '_ppp_document_settings_meta', true );
-        $ppp_document_settings_meta = ( !empty( $ppp_document_settings_meta ) ? json_decode( $ppp_document_settings_meta ) : [] );
-        $ppp_document_protected_ids = $ppp_document_settings_meta->product_ids ?? [];
+        $ppp_document_settings_meta = $this->posted_document_settings();
+        if ( null === $ppp_document_settings_meta ) {
+            return;
+        }
         $protected_ids = [];
-        foreach ( $ppp_document_protected_ids as $data ) {
-            $protected_ids[] = $data->value;
+        foreach ( $ppp_document_settings_meta->product_ids as $data ) {
+            if ( isset( $data->value ) ) {
+                $protected_ids[] = $data->value;
+            }
         }
         $protected_ids = $this->sanitize_product_ids( $protected_ids );
         update_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', $protected_ids );
+    }
+
+    /**
+     * The Pay For Post sidebar's settings, as posted with the meta box.
+     *
+     * @return object|null Null when the sidebar posted nothing, because it was not
+     *                     touched, or posted something without a product list. Either
+     *                     way the caller must leave the post's protection alone.
+     */
+    private function posted_document_settings() {
+        $posted = $_POST[WC_PPP_SLUG . '_document_settings'] ?? '';
+        if ( !is_string( $posted ) || '' === $posted ) {
+            return null;
+        }
+        $settings = json_decode( wp_unslash( $posted ) );
+        if ( !is_object( $settings ) || !isset( $settings->product_ids ) || !is_array( $settings->product_ids ) ) {
+            return null;
+        }
+        return $settings;
+    }
+
+    /**
+     * The post's product IDs, as strings, for the sidebar to preselect.
+     *
+     * The sidebar matches them against its product options, whose IDs are
+     * strings, with a strict includes(). IDs stored as integers, by an import or
+     * other code writing the meta directly, showed as unselected, and the next
+     * change made in the sidebar saved the post without them.
+     *
+     * @param int $post_id The post being edited.
+     *
+     * @return string[]
+     */
+    private function product_ids_for_sidebar( $post_id ) : array {
+        $product_ids = array_filter( (array) get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true ), 'is_numeric' );
+        return array_values( array_map( 'strval', $product_ids ) );
     }
 
     public function enqueue_wp_editor_integration_scripts() {
         if ( 'post' === WP_Screen::get()->base ) {
             global $post;
             $id = $post->ID;
-            $selected_product_ids = get_post_meta( $id, WC_PPP_SLUG . '_product_ids', true );
+            $selected_product_ids = $this->product_ids_for_sidebar( $id );
             $delay_restriction_enable = get_post_meta( $id, WC_PPP_SLUG . '_delay_restriction_enable', true );
             $delay_restriction = get_post_meta( $id, WC_PPP_SLUG . '_delay_restriction', true );
             $delay_restriction_frequency = get_post_meta( $id, WC_PPP_SLUG . '_delay_restriction_frequency', true );

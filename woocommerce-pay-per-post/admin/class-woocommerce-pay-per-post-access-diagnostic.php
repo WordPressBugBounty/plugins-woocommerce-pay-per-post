@@ -110,6 +110,19 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 		};
 		add_filter( 'wc_pay_per_post_is_admin_call', $simulate_front_end, 99 );
 
+		// Expiry and page-view protection measure access from one order's paid
+		// date. The engine applies this filter to the order it picked, so
+		// recording it names that order without a second copy of the query.
+		$date_order_id     = 0;
+		$record_date_order = static function ( $sql, $order_id, $post_id ) use ( &$date_order_id, $post ) {
+			if ( (int) $post_id === $post->ID ) {
+				$date_order_id = (int) $order_id;
+			}
+
+			return $sql;
+		};
+		add_filter( 'wc_pay_per_post_override_purchase_date_sql', $record_date_order, 10, 3 );
+
 		// The engine caches resolved product ids for the request in a global.
 		$saved_product_ids = $GLOBALS['product_ids'] ?? null;
 
@@ -128,6 +141,7 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 			$info     = $restrict->user_post_info ?? [];
 		} finally {
 			remove_filter( 'wc_pay_per_post_is_admin_call', $simulate_front_end, 99 );
+			remove_filter( 'wc_pay_per_post_override_purchase_date_sql', $record_date_order, 10 );
 			$GLOBALS['product_ids'] = $saved_product_ids;
 			wp_set_current_user( $original_user );
 			self::flush_request_caches();
@@ -138,9 +152,15 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 			'post'        => $post,
 			'verdict'     => (bool) $verdict,
 			'protection'  => $protection,
-			'reason'      => self::explain( (bool) $verdict, $checks, $protection, $info, $post->ID ),
+			'reason'      => self::explain( (bool) $verdict, $checks, $protection, $info, $post->ID, $user ),
 			'evidence'    => self::evidence( $user, $protection, $info, $checks, $post->ID ),
-			'history'     => self::purchase_history( $user, (array) ( $protection['product_ids'] ?? [] ) ),
+			'history'     => self::purchase_history(
+				$user,
+				(array) ( $protection['product_ids'] ?? [] ),
+				(string) ( $protection['protection_type'] ?? 'standard' ),
+				$date_order_id,
+				$info['last_purchase_date'] ?? null
+			),
 			'page_config' => self::page_configuration( $post->ID ),
 			'products'    => self::product_facts( (array) ( $protection['product_ids'] ?? [] ) ),
 			'versions'    => self::versions(),
@@ -182,7 +202,7 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 	/**
 	 * Turn the check results into the single sentence a support reply needs.
 	 */
-	private static function explain( bool $verdict, array $checks, array $protection, array $info, int $post_id ): string {
+	private static function explain( bool $verdict, array $checks, array $protection, array $info, int $post_id, ?WP_User $user = null ): string {
 		if ( empty( $protection['is_protected'] ) ) {
 			return __( 'This page is not protected by Pay For Post at all, so everyone can see it. If the customer cannot, the cause is elsewhere — a membership plugin, the theme, or caching.', 'wc_pay_per_post' );
 		}
@@ -225,6 +245,17 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 		}
 
 		if ( empty( $checks['check_if_purchased'] ) ) {
+			// They DID pay — on a plan whose subscription has since lapsed.
+			// "Has not purchased" would send support looking for a missing order.
+			$lapsed = self::lapsed_plan_products( $user, (array) ( $protection['product_ids'] ?? [] ) );
+			if ( $lapsed ) {
+				return sprintf(
+					/* translators: %s: product name(s) */
+					__( 'No access: this customer bought %s on a subscription plan, and holds no active subscription to it. A purchase made on a plan unlocks the page only while its subscription is active or pending cancellation; buying the product one-time unlocks it permanently.', 'wc_pay_per_post' ),
+					implode( ', ', $lapsed )
+				);
+			}
+
 			return __( 'No access: this customer has not purchased any of the products that protect this page. If they believe they paid, check the order exists, is Completed or Processing, and is attached to THIS user account rather than a guest checkout.', 'wc_pay_per_post' );
 		}
 
@@ -257,6 +288,63 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 	}
 
 	/**
+	 * The WooCommerce Subscriptions integration, or null when it is not in use.
+	 */
+	private static function subscriptions_integration(): ?\PRAMADILLO\INTEGRATIONS\WooCommerceSubscriptions {
+		if ( ! Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() || ! class_exists( '\PRAMADILLO\INTEGRATIONS\WooCommerceSubscriptions' ) ) {
+			return null;
+		}
+
+		return new \PRAMADILLO\INTEGRATIONS\WooCommerceSubscriptions();
+	}
+
+	/**
+	 * Products sold on plans that this customer bought on a plan but no longer
+	 * has access through.
+	 *
+	 * @return string[] "#id name" labels.
+	 */
+	private static function lapsed_plan_products( ?WP_User $user, array $product_ids ): array {
+		$subscriptions = self::subscriptions_integration();
+
+		if ( ! $user || ! $subscriptions ) {
+			return [];
+		}
+
+		$lapsed = [];
+		foreach ( $product_ids as $id ) {
+			$id = trim( (string) $id );
+
+			if ( $subscriptions->is_plan_product( $id ) && $subscriptions->has_plan_purchase( $user, $id ) && ! $subscriptions->has_plan_product_access( $user, $id ) ) {
+				$product  = wc_get_product( $id );
+				$lapsed[] = '#' . $id . ( $product ? ' ' . $product->get_name() : '' );
+			}
+		}
+
+		return $lapsed;
+	}
+
+	/**
+	 * How a customer stands with a product sold on subscription plans — the
+	 * product's line in "Required products".
+	 */
+	private static function plan_purchase_status( \PRAMADILLO\INTEGRATIONS\WooCommerceSubscriptions $subscriptions, WP_User $user, string $product_id ): string {
+		if ( $subscriptions->has_active_subscription_to( $user->ID, $product_id ) ) {
+			return __( 'sold on subscription plans; ACTIVE subscription', 'wc_pay_per_post' );
+		}
+
+		if ( $subscriptions->has_one_time_purchase( $user, $product_id ) ) {
+			return __( 'sold on subscription plans; bought one-time', 'wc_pay_per_post' );
+		}
+
+		if ( $subscriptions->has_plan_purchase( $user, $product_id ) ) {
+			return __( 'sold on subscription plans; bought on a plan, but NO active subscription', 'wc_pay_per_post' );
+		}
+
+		return __( 'sold on subscription plans; NOT purchased', 'wc_pay_per_post' );
+	}
+
+	/**
 	 * The supporting facts — what a support reply needs to quote.
 	 */
 	private static function evidence( WP_User $user, array $protection, array $info, array $checks, int $post_id ): array {
@@ -272,18 +360,18 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 
 		$rows[ __( 'Protection type', 'wc_pay_per_post' ) ] = $protection['protection_type'] ?? 'standard';
 
-		$product_ids = (array) ( $protection['product_ids'] ?? [] );
-		$products    = [];
+		$product_ids   = (array) ( $protection['product_ids'] ?? [] );
+		$products      = [];
+		$subscriptions = self::subscriptions_integration();
 		foreach ( $product_ids as $id ) {
 			$product    = wc_get_product( trim( (string) $id ) );
 			$label      = $product ? $product->get_name() : __( 'missing product', 'wc_pay_per_post' );
-			$purchased  = Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $user->user_email, $user->ID, trim( (string) $id ) );
-			$products[] = sprintf(
-				'#%s %s — %s',
-				trim( (string) $id ),
-				$label,
-				$purchased ? __( 'purchased', 'wc_pay_per_post' ) : __( 'NOT purchased', 'wc_pay_per_post' )
-			);
+			$status     = $subscriptions && $subscriptions->is_plan_product( trim( (string) $id ) )
+				? self::plan_purchase_status( $subscriptions, $user, trim( (string) $id ) )
+				: ( Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $user->user_email, $user->ID, trim( (string) $id ) )
+					? __( 'purchased', 'wc_pay_per_post' )
+					: __( 'NOT purchased', 'wc_pay_per_post' ) );
+			$products[] = sprintf( '#%s %s — %s', trim( (string) $id ), $label, $status );
 		}
 		$rows[ __( 'Required products', 'wc_pay_per_post' ) ] = $products ? implode( "\n", $products ) : __( 'none', 'wc_pay_per_post' );
 
@@ -355,16 +443,6 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 	}
 
 	/**
-	 * Order statuses that count as a purchase.
-	 *
-	 * Mirrors the WHERE clause of
-	 * `Restrict_Content::get_last_purchase_date__premium_only()`. Kept in step by
-	 * tests/unit/LastPurchaseQueryTest.php, which reads the statuses straight out
-	 * of that method's SQL and fails if the two ever disagree.
-	 */
-	public const QUALIFYING_STATUSES = [ 'completed', 'processing' ];
-
-	/**
 	 * The customer's complete purchase history, with nothing filtered out.
 	 *
 	 * An earlier version of this listed only orders containing a product that
@@ -377,21 +455,33 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 	 * customer bought that do NOT unlock this page. That last list is usually
 	 * where the answer is.
 	 *
+	 * An order counts toward access by the rule of the engine's purchase check,
+	 * `wc_customer_bought_product()`: it carries a product that unlocks the page
+	 * and its status is one WooCommerce treats as paid. Not whether it has a paid
+	 * date: WooCommerce leaves a Cash on Delivery order processing, with no paid
+	 * date, until it is completed, and the purchase check counts it all along.
+	 * A line bought on a subscription plan counts only while that subscription
+	 * is active, as in `WooCommerceSubscriptions::has_plan_product_access()`.
+	 *
 	 * Orders are gathered by account AND by billing email, because the two differ
 	 * in ways that matter. The engine's purchase CHECK matches on billing email
-	 * or account (`wc_customer_bought_product()`), while the purchase DATE query
-	 * matches on the account only — so an order can count as a purchase yet never
-	 * move the expiry clock. Both are shown, per order.
+	 * or account, while the purchase DATE that expiry and page-view protection
+	 * measure from comes from an order on the account only — so an order can
+	 * count as a purchase yet never move the expiry clock. Both are shown, per
+	 * order.
 	 *
 	 * Contains no personal data: no name, address, phone or billing details. Just
 	 * order ids, dates, statuses, totals and product ids.
 	 *
-	 * @param WP_User $user
-	 * @param array   $required_product_ids Products that protect the page.
+	 * @param WP_User                $user
+	 * @param array                  $required_product_ids Products that protect the page.
+	 * @param string                 $protection_type      The page's protection type, as the engine applies it.
+	 * @param int                    $date_order_id        The order the engine measured the purchase date from; 0 when it measured none.
+	 * @param DateTimeInterface|null $measured_from        The date the engine measured from.
 	 *
 	 * @return array{orders: array, other_products: array, total_found: int, truncated: bool, qualifying_count: int}
 	 */
-	public static function purchase_history( WP_User $user, array $required_product_ids ): array {
+	public static function purchase_history( WP_User $user, array $required_product_ids, string $protection_type = 'standard', int $date_order_id = 0, ?DateTimeInterface $measured_from = null ): array {
 		$empty = [
 			'orders'           => [],
 			'other_products'   => [],
@@ -427,10 +517,15 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 		$rows           = [];
 		$other_products = [];
 		$qualifying     = 0;
+		$subscriptions  = self::subscriptions_integration();
 
 		foreach ( $found as $order ) {
-			$items       = [];
+			$items        = [];
 			$has_required = false;
+			// A plan line counts only while its subscription is active. Track it
+			// apart, so a lapsed plan is not reported as "no product that unlocks".
+			$counting_line    = false;
+			$lapsed_plan_line = false;
 
 			foreach ( $order->get_items() as $item ) {
 				$product_id   = (int) $item->get_product_id();
@@ -440,6 +535,16 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 
 				if ( $is_required ) {
 					$has_required = true;
+					$matched      = in_array( $product_id, $required, true ) ? $product_id : $variation_id;
+
+					if ( $subscriptions && $order instanceof WC_Order && $item instanceof WC_Order_Item_Product
+						&& $subscriptions->is_plan_product( $matched )
+						&& $subscriptions->is_subscription_purchase( $order, $item, $matched )
+						&& ! $subscriptions->has_active_subscription_to( $user->ID, $matched ) ) {
+						$lapsed_plan_line = true;
+					} else {
+						$counting_line = true;
+					}
 				} else {
 					if ( ! isset( $other_products[ $id ] ) ) {
 						$other_products[ $id ] = [
@@ -460,9 +565,9 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 
 			$status    = $order->get_status();
 			$attached  = (int) $order->get_customer_id() === (int) $user->ID;
-			$status_ok = in_array( $status, self::QUALIFYING_STATUSES, true );
+			$status_ok = in_array( $status, wc_get_is_paid_statuses(), true );
 			$paid      = $order->get_date_paid();
-			$qualifies = $has_required && $attached && $status_ok && (bool) $paid;
+			$qualifies = $counting_line && $status_ok;
 
 			if ( $qualifies ) {
 				++$qualifying;
@@ -472,28 +577,77 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 			if ( ! $has_required ) {
 				$reasons[] = __( 'contains no product that unlocks this page', 'wc_pay_per_post' );
 			}
-			if ( ! $attached ) {
-				// Deliberately precise: such an order DOES satisfy the purchase
-				// check, which matches on billing email, but does NOT supply the
-				// purchase date, which matches on the account only.
-				$reasons[] = 0 === (int) $order->get_customer_id()
-					? __( 'placed as a GUEST — counts as a purchase (matched on billing email) but cannot supply the purchase date', 'wc_pay_per_post' )
-					: sprintf(
-						/* translators: %d: user ID the order belongs to */
-						__( 'belongs to a DIFFERENT account (user %d) — counts as a purchase (matched on billing email) but cannot supply the purchase date', 'wc_pay_per_post' ),
-						(int) $order->get_customer_id()
-					);
+			if ( $has_required && ! $counting_line && $lapsed_plan_line ) {
+				$reasons[] = __( 'bought on a subscription plan, and no subscription containing the product is active — a plan purchase counts only while its subscription is active', 'wc_pay_per_post' );
 			}
 			if ( ! $status_ok ) {
 				$reasons[] = sprintf(
 					/* translators: 1: order status, 2: qualifying statuses */
 					__( 'status is "%1$s"; only %2$s count', 'wc_pay_per_post' ),
 					$status,
-					implode( ' / ', self::QUALIFYING_STATUSES )
+					implode( ' / ', wc_get_is_paid_statuses() )
 				);
 			}
-			if ( $has_required && $attached && $status_ok && ! $paid ) {
-				$reasons[] = __( 'has no paid date recorded', 'wc_pay_per_post' );
+
+			// What counting does not show: how the order matched, and whether the
+			// purchase date comes from it.
+			$note = '';
+			if ( $qualifies && ! $attached ) {
+				// Deliberately precise: such an order DOES satisfy the purchase
+				// check, which matches on billing email, but cannot supply the
+				// purchase date, which comes from an order on the account only.
+				$owner = 0 === (int) $order->get_customer_id()
+					? __( 'placed as a GUEST', 'wc_pay_per_post' )
+					: sprintf(
+						/* translators: %d: user ID the order belongs to */
+						__( 'belongs to a DIFFERENT account (user %d)', 'wc_pay_per_post' ),
+						(int) $order->get_customer_id()
+					);
+
+				if ( 'expire' === $protection_type ) {
+					$note = sprintf(
+						/* translators: %s: whose order it is, e.g. "placed as a GUEST" */
+						__( '%s — counts as a purchase (matched on billing email), but cannot supply the purchase date the expiry window is measured from; only an order on the customer\'s account can', 'wc_pay_per_post' ),
+						$owner
+					);
+				} elseif ( 'page-view' === $protection_type ) {
+					$note = sprintf(
+						/* translators: %s: whose order it is, e.g. "placed as a GUEST" */
+						__( '%s — counts as a purchase (matched on billing email), but cannot supply the purchase date page views are counted from; only an order on the customer\'s account can', 'wc_pay_per_post' ),
+						$owner
+					);
+				} else {
+					$note = sprintf(
+						/* translators: %s: whose order it is, e.g. "placed as a GUEST" */
+						__( '%s — counts as a purchase (matched on billing email)', 'wc_pay_per_post' ),
+						$owner
+					);
+				}
+			}
+
+			// The order the engine measured expiry or page views from: the one place
+			// a paid date matters. A Cash on Delivery order has none until it is
+			// completed, and the engine then measures from a stand-in date.
+			if ( $date_order_id && $date_order_id === $order->get_id() ) {
+				$fallback = $measured_from ? $measured_from->format( Woocommerce_Pay_Per_Post_Helper::date_time_format() ) : '?';
+
+				if ( 'expire' === $protection_type ) {
+					$note = $paid
+						? __( 'the expiry window is measured from this order\'s paid date', 'wc_pay_per_post' )
+						: sprintf(
+							/* translators: %s: the date the plugin measured the expiry window from instead */
+							__( 'the expiry window is measured from this order, but it has no paid date, so the plugin fell back to %s', 'wc_pay_per_post' ),
+							$fallback
+						);
+				} elseif ( 'page-view' === $protection_type ) {
+					$note = $paid
+						? __( 'page views are counted from this order\'s paid date', 'wc_pay_per_post' )
+						: sprintf(
+							/* translators: %s: the date the plugin counted page views from instead */
+							__( 'page views are counted from this order, but it has no paid date, so the plugin fell back to %s', 'wc_pay_per_post' ),
+							$fallback
+						);
+				}
 			}
 
 			$rows[] = [
@@ -510,6 +664,7 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 				}, $items ) ),
 				'qualifies'  => (bool) $qualifies,
 				'why_not'    => implode( '; ', $reasons ),
+				'note'       => $note,
 			];
 		}
 
@@ -604,7 +759,10 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 				'id'           => $id,
 				'name'         => $product->get_name(),
 				'type'         => $product->get_type(),
-				'subscription' => Woocommerce_Pay_Per_Post_Protection_Checks::check_if_product_is_a_subscription_product( $id ) ? 'yes' : 'no',
+				// "plan": sold on subscription plans, a different rule from "yes".
+				'subscription' => Woocommerce_Pay_Per_Post_Protection_Checks::check_if_product_is_a_subscription_product( $id )
+					? 'yes'
+					: ( Woocommerce_Pay_Per_Post_Protection_Checks::check_if_product_is_a_subscription_plan_product( $id ) ? 'plan' : 'no' ),
 				'membership'   => Woocommerce_Pay_Per_Post_Protection_Checks::check_if_product_is_a_membership_product( $id ) ? 'yes' : 'no',
 			];
 		}
@@ -853,6 +1011,9 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 				}
 				if ( ! $row['qualifies'] ) {
 					$lines[] = '        -> ' . $row['why_not'];
+				}
+				if ( '' !== $row['note'] ) {
+					$lines[] = '        -> ' . $row['note'];
 				}
 			}
 		}

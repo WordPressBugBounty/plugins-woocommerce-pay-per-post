@@ -197,6 +197,9 @@
 													    echo $row['qualifies']
 														    ? esc_html__( 'yes', 'wc_pay_per_post' )
 														    : esc_html__( 'no — ', 'wc_pay_per_post' ) . esc_html( $row['why_not'] );
+													    if ( '' !== $row['note'] ) {
+														    echo '<br><span class="description">' . esc_html( $row['note'] ) . '</span>';
+													    }
 													    ?>
                                                     </td>
                                                 </tr>

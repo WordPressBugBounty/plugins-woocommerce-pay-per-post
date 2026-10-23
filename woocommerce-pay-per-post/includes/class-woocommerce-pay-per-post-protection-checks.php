@@ -2,13 +2,14 @@
 
 class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Post {
     public static function check_if_admin_call( $post_id, $product_ids ) : bool {
+        $is_admin_call = Woocommerce_Pay_Per_Post_Helper::is_wp_admin_request( $post_id );
         $post_id_str = 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_admin_call  - IS ';
-        $log_str = $post_id_str . (( is_admin() ? 'an Admin Call' : 'NOT an Admin Call' ));
+        $log_str = $post_id_str . (( $is_admin_call ? 'an Admin Call' : 'NOT an Admin Call' ));
         Woocommerce_Pay_Per_Post_Helper::logger( $log_str );
         // See the note on Restrict_Content::check_if_admin_call(). The
         // element-level path needs the same escape hatch, or the access
         // diagnostic would report every element as visible to everyone.
-        return (bool) apply_filters( 'wc_pay_per_post_is_admin_call', is_admin(), $post_id );
+        return (bool) apply_filters( 'wc_pay_per_post_is_admin_call', $is_admin_call, $post_id );
     }
 
     public static function check_if_admin_user_have_access( $post_id, $product_ids ) : bool {
@@ -37,6 +38,14 @@ class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Pos
         foreach ( $product_ids as $id ) {
             if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\WooCommerceSubscriptions' ) ) {
                 $subscriptions = new \PRAMADILLO\INTEGRATIONS\WooCommerceSubscriptions();
+                // Same rule, in the same order, as Restrict_Content::check_if_purchased().
+                if ( $subscriptions->is_plan_product( trim( $id ) ) ) {
+                    if ( $subscriptions->has_plan_product_access( $current_user, trim( $id ) ) ) {
+                        Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . get_the_ID() . ' - Woocommerce_Pay_Per_Post_Protection_Checks/check_if_purchased  - User has access through subscription plan product id #' . trim( $id ) );
+                        return true;
+                    }
+                    continue;
+                }
                 $has_purchased = Woocommerce_Pay_Per_Post_Helper::customer_has_purchased_product( $current_user->user_email, $current_user->ID, trim( $id ) );
                 $is_subscription = $subscriptions->is_subscription_product( $id );
                 if ( $has_purchased && !$is_subscription ) {
@@ -117,8 +126,18 @@ class Woocommerce_Pay_Per_Post_Protection_Checks extends Woocommerce_Pay_Per_Pos
     }
 
     public static function check_if_product_is_a_subscription_product( $id ) : bool {
-        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() ) {
-            return WC_Subscriptions_Product::is_subscription( $id );
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\WooCommerceSubscriptions' ) ) {
+            return ( new \PRAMADILLO\INTEGRATIONS\WooCommerceSubscriptions() )->is_subscription_product( $id );
+        }
+        return false;
+    }
+
+    /**
+     * Whether the product is sold on WooCommerce Subscriptions plans (9.0+).
+     */
+    public static function check_if_product_is_a_subscription_plan_product( $id ) : bool {
+        if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions() && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\WooCommerceSubscriptions' ) ) {
+            return ( new \PRAMADILLO\INTEGRATIONS\WooCommerceSubscriptions() )->is_plan_product( $id );
         }
         return false;
     }
