@@ -27,8 +27,8 @@
                                 $page_view.remove();
                             })
                             .fail(function (result) {
-                                alert('Failed to remove page view ' + result);
-
+                                const error = result.responseJSON && result.responseJSON.data && result.responseJSON.data.message;
+                                alert(error || 'Failed to remove page view ' + page_view_id);
                             });
 
                     }

@@ -80,6 +80,63 @@
 		}
 
 
+		/**
+		 * The level with this ID, or null. Level IDs are Paid Memberships Pro's
+		 * own and can equal a WooCommerce product's ID. Unlike
+		 * get_membership_levels(), this finds levels that do not allow new
+		 * sign-ups too.
+		 *
+		 * @param int|string $id
+		 *
+		 * @return object|null
+		 * @noinspection PhpUndefinedFunctionInspection
+		 */
+		public function get_level( $id ) {
+			if ( ! function_exists( 'pmpro_getLevel' ) || (int) $id <= 0 ) {
+				return null;
+			}
+
+			$level = pmpro_getLevel( (int) $id );
+
+			return empty( $level->id ) ? null : $level;
+		}
+
+		/**
+		 * Whether a visitor can buy this level at checkout.
+		 *
+		 * @param object $level From get_level().
+		 *
+		 * @return bool
+		 */
+		public function allows_signups( $level ): bool {
+			return ! empty( $level->allow_signups );
+		}
+
+		/**
+		 * The Paid Memberships Pro checkout page for a level. 3.0 renamed the
+		 * query argument to pmpro_level; earlier versions read only level.
+		 *
+		 * @param int|string  $level_id
+		 * @param string|null $version Paid Memberships Pro's version; the
+		 *                             installed one when null.
+		 *
+		 * @return string
+		 * @noinspection PhpUndefinedFunctionInspection
+		 */
+		public function get_checkout_url( $level_id, ?string $version = null ): string {
+			if ( ! function_exists( 'pmpro_url' ) ) {
+				return '';
+			}
+
+			if ( null === $version ) {
+				$version = defined( 'PMPRO_VERSION' ) ? (string) PMPRO_VERSION : '0';
+			}
+
+			$argument = version_compare( $version, '3.0', '>=' ) ? 'pmpro_level' : 'level';
+
+			return (string) pmpro_url( 'checkout', '?' . $argument . '=' . (int) $level_id );
+		}
+
 		public function post_contains_membership_products( $post_id, $product_ids = null ): bool {
 			if(is_null($product_ids)){
 				$product_ids = (array) get_post_meta( $post_id, WC_PPP_SLUG . '_product_ids', true );

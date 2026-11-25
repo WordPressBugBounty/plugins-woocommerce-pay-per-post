@@ -142,6 +142,15 @@ class Woocommerce_Pay_Per_Post_Debug {
         ];
     }
 
+    /**
+     * Whether the premium page-view table exists. One SHOW TABLES query.
+     *
+     * @return bool
+     */
+    public static function page_view_table_exists() : bool {
+        return self::does_page_view_table_exist();
+    }
+
     private static function does_page_view_table_exist() : bool {
         global $wpdb;
         $exists = (array) $wpdb->get_results( "SHOW TABLES LIKE '{$wpdb->prefix}woocommerce_pay_per_post_pageviews'", ARRAY_A );

@@ -7,7 +7,7 @@
  * The $purchased variable is a WP Posts Object of purchased posts.
  */
 ?>
-<div class="ppp-purchased-content"><strong><?php echo apply_filters( 'wc_pay_per_post_purchased_content_title', esc_html__( 'Access Your Purchased Content', 'wc_pay_per_post' ) ); ?></strong><br>
+<div class="ppp-purchased-content"><strong><?php echo apply_filters( 'wc_pay_per_post_purchased_content_title', Woocommerce_Pay_Per_Post_Helper::setting_text( 'order_links_heading', esc_html__( 'Access Your Purchased Content', 'wc_pay_per_post' ) ) ); ?></strong><br>
 	<ul class="ppp-purchased-content__list">
 		<?php foreach ( $purchased as $item ): ?>
 			<li><a href="<?php echo $item['post_url']; ?>" target="_blank"><?php echo $item['post_title']; ?></a></li>

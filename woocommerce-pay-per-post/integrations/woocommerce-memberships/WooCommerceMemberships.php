@@ -89,6 +89,50 @@ class WooCommerceMemberships {
 	}
 
 
+	/**
+	 * Whether an ID stored in a post's protection is a membership plan.
+	 *
+	 * @param int|string $id
+	 *
+	 * @return bool
+	 */
+	public function is_plan( $id ): bool {
+		$membership_levels = $this->get_membership_levels();
+
+		return is_array( $membership_levels ) && array_key_exists( (int) $id, $membership_levels );
+	}
+
+	/**
+	 * The products whose purchase grants a plan, so the paywall can sell the
+	 * plan. Memberships grants a plan from any order containing one of these
+	 * products, whatever the plan's access method says. Products that no
+	 * longer exist or are not published are left out, because the paywall
+	 * could not sell them.
+	 *
+	 * @param int|string $plan_id
+	 *
+	 * @return int[] Empty for a plan granted only manually or on sign-up.
+	 */
+	public function get_plan_product_ids( $plan_id ): array {
+		$membership_levels = $this->get_membership_levels();
+
+		if ( ! is_array( $membership_levels ) || ! isset( $membership_levels[ (int) $plan_id ] ) ) {
+			return [];
+		}
+
+		$product_ids = [];
+
+		foreach ( $membership_levels[ (int) $plan_id ]->get_product_ids() as $product_id ) {
+			$product = wc_get_product( $product_id );
+
+			if ( $product && 'publish' === $product->get_status() ) {
+				$product_ids[] = (int) $product_id;
+			}
+		}
+
+		return $product_ids;
+	}
+
 	public function post_contains_membership_products( $post_id, $product_ids = null ): bool {
 
 		if(is_null($product_ids)){

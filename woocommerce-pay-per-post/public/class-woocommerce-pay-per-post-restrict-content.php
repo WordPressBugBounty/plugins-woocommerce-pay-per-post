@@ -129,7 +129,7 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
 
     public function check_if_user_role_has_access() : bool {
         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/check_if_user_role_has_access  - BACKTRACE - Called From - ' . print_r( debug_backtrace()[1]['function'], true ) );
-        $allowed_user_roles = [];
+        $allowed_user_roles = Woocommerce_Pay_Per_Post_Helper::paywall_bypass_roles();
         $current_user_roles = $this->get_current_user_roles();
         foreach ( $current_user_roles as $role ) {
             if ( in_array( $role, $allowed_user_roles ) ) {
@@ -352,13 +352,10 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
         foreach ( $this->protection_checks as $check ) {
             $check_results[$check] = $this->{$check}();
         }
+        // The check results go to the debug log only (Settings, "Enable
+        // Debugging?", plus ?wc-ppp-debug on the page). Never print them: this
+        // runs for every visitor, in REST responses and in feeds.
         Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/can_user_view_content  Check Results ' . var_export( $check_results, true ) );
-        if ( isset( $_GET['wc_ppp_debug'] ) && "true" === $_GET['wc_ppp_debug'] ) {
-            echo '<pre>';
-            echo '<h5>Post ID = ' . $this->post_id . '</h5>';
-            var_dump( $check_results );
-            echo '</pre>';
-        }
         if ( $check_results['check_if_admin_call'] || !$check_results['check_if_protected'] || !$check_results['check_if_should_show_paywall'] || $check_results['check_if_admin_user_have_access'] || $check_results['check_if_user_role_has_access'] || $check_results['check_if_has_access'] && !$check_results['check_if_post_contains_subscription_products'] ) {
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $this->post_id . ' - Woocommerce_Pay_Per_Post_Restrict_Content/can_user_view_content  Check Results FAILED returning FALSE' );
             return true;
@@ -390,12 +387,12 @@ class Woocommerce_Pay_Per_Post_Restrict_Content {
         $show_warnings = get_post_meta( $this->post_id, WC_PPP_SLUG . '_show_warnings', true );
         // countdown_refresh() prints a <script>, which in a REST response would
         // land in front of the JSON and break it.
-        if ( 'expire' === $this->protection_type && !is_admin() && !(defined( 'REST_REQUEST' ) && REST_REQUEST) && !$this->check_if_admin_user_have_access() && apply_filters( 'wc_pay_per_post_enable_javascript_expiration_refresh', true ) ) {
+        if ( 'expire' === $this->protection_type && !is_admin() && !(defined( 'REST_REQUEST' ) && REST_REQUEST) && !$this->check_if_admin_user_have_access() && apply_filters( 'wc_pay_per_post_enable_javascript_expiration_refresh', (bool) get_option( WC_PPP_SLUG . '_expiry_reload', true ) ) ) {
             $this->countdown_refresh();
         }
         if ( $show_warnings && !is_admin() ) {
             Woocommerce_Pay_Per_Post_Helper::logger( 'Page/Post has show_warnings enabled' );
-            $position = apply_filters( 'wc_pay_for_post_show_warnings_position', 'top' );
+            $position = apply_filters( 'wc_pay_for_post_show_warnings_position', ( 'bottom' === get_option( WC_PPP_SLUG . '_status_box_position', 'top' ) ? 'bottom' : 'top' ) );
             switch ( $this->protection_type ) {
                 case 'page-view':
                     $template_file = do_shortcode( '[wc-pay-for-post-status template="page-view"]' );

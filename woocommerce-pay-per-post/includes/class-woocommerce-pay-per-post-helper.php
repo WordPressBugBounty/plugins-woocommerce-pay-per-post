@@ -226,15 +226,28 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
         ];
     }
 
+    /**
+     * The meta query that makes a post "protected" for the protected posts
+     * lists: it has stored protection IDs, or (Premium, with Elementor) an
+     * Elementor element with protection turned on. get_protected_posts() and
+     * the Protected Content screen share it, so they list the same posts.
+     *
+     * @return array A WP_Query meta_query.
+     */
+    public static function get_protected_posts_meta_query() : array {
+        $meta_query = [[
+            'key'     => WC_PPP_SLUG . '_product_ids',
+            'value'   => '',
+            'compare' => '!=',
+        ]];
+        return $meta_query;
+    }
+
     public static function get_protected_posts( $args = null, $transient = 'posts', $bypass_transient = false ) : array {
         $transient = WC_PPP_SLUG . '_' . $transient;
         if ( is_null( $args ) ) {
             $args = self::get_protected_post_types_args();
-            $args['meta_query'] = [[
-                'key'     => WC_PPP_SLUG . '_product_ids',
-                'value'   => '',
-                'compare' => '!=',
-            ]];
+            $args['meta_query'] = self::get_protected_posts_meta_query();
         }
         if ( $bypass_transient ) {
             Woocommerce_Pay_Per_Post_Helper::logger( 'Woocommerce_Pay_Per_Post_Helper::get_protected_posts() returning posts BYPASSING TRANSIENT' );
@@ -336,12 +349,13 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
      * workarounds that fake the subscription answer end up disabling expire and
      * page-view protection as a side effect.
      *
-     * The filter lets such a store opt out and have PPP treat those products as
-     * ordinary purchases, so purchase-plus-expiry behaves as configured:
+     * Such a store can opt out and have PPP treat those products as ordinary
+     * purchases, so purchase-plus-expiry behaves as configured: untick "Use
+     * WooCommerce Subscriptions" under Settings > Integrations, or
      *
      *     add_filter( 'wc_pay_per_post_can_use_woocommerce_subscriptions', '__return_false' );
      *
-     * Default behaviour is unchanged.
+     * The filter receives the setting and wins over it.
      *
      * @return bool
      */
@@ -350,6 +364,16 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
         return (bool) apply_filters( 'wc_pay_per_post_can_use_woocommerce_subscriptions', $can_use );
     }
 
+    /**
+     * Whether the Paid Memberships Pro integration runs: Premium, and Paid
+     * Memberships Pro active. Turn it off with:
+     *
+     *     add_filter( 'wc_pay_per_post_can_use_paid_memberships_pro', '__return_false' );
+     *
+     * The filter cannot turn it on without Premium.
+     *
+     * @return bool
+     */
     public static function can_use_paid_membership_pro() : bool {
         return false;
     }
@@ -479,23 +503,195 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
         }
     }
 
-    public static function replace_tokens( $paywall_content, $product_ids, $unfiltered_content = null ) {
-        $parent_id = null;
-        if ( isset( $product_ids[0] ) ) {
-            $parent_id = wp_get_post_parent_id( $product_ids[0] );
+    /**
+     * What the paywall can sell for a post's protection.
+     *
+     * The stored protection IDs mix WooCommerce products with WooCommerce
+     * Memberships plan IDs and Paid Memberships Pro level IDs, which no
+     * product shortcode can show. A plan is replaced by the products that grant
+     * it, and a level becomes a link to its Paid Memberships Pro checkout.
+     * Everything else is kept as it was stored, in order.
+     *
+     * @param array|string $ids The post's protection IDs.
+     *
+     * @return array{product_ids: array, unlisted_product_ids: int[], pmpro_levels: object[], has_membership: bool}
+     *               unlisted_product_ids are the plans' products that
+     *               WooCommerce's [products] shortcode does not show (a
+     *               variation, or a product hidden from the shop), which the
+     *               paywall links to instead; they are in product_ids too.
+     *               pmpro_levels holds only levels open to sign-ups.
+     *               has_membership is true when any ID was a plan or a level.
+     */
+    public static function get_paywall_offer( $ids ) : array {
+        $offer = [
+            'product_ids'          => [],
+            'unlisted_product_ids' => [],
+            'pmpro_levels'         => [],
+            'has_membership'       => false,
+        ];
+        $memberships = null;
+        if ( self::can_use_woocommerce_memberships() && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\WooCommerceMemberships' ) ) {
+            $memberships = new \PRAMADILLO\INTEGRATIONS\WooCommerceMemberships();
         }
+        $pmpro = null;
+        if ( self::can_use_paid_membership_pro() && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\PaidMembershipsPro' ) ) {
+            $pmpro = new \PRAMADILLO\INTEGRATIONS\PaidMembershipsPro();
+        }
+        $ids = array_filter( (array) $ids, static function ( $id ) {
+            return is_scalar( $id ) && '' !== trim( (string) $id );
+        } );
+        foreach ( $ids as $id ) {
+            if ( $memberships && $memberships->is_plan( $id ) ) {
+                $offer['has_membership'] = true;
+                foreach ( $memberships->get_plan_product_ids( $id ) as $plan_product_id ) {
+                    $offer['product_ids'][] = $plan_product_id;
+                    if ( !self::product_list_shows( $plan_product_id ) ) {
+                        $offer['unlisted_product_ids'][$plan_product_id] = $plan_product_id;
+                    }
+                }
+                continue;
+            }
+            $level = ( $pmpro ? $pmpro->get_level( $id ) : null );
+            if ( $level ) {
+                $offer['has_membership'] = true;
+                if ( $pmpro->allows_signups( $level ) ) {
+                    $offer['pmpro_levels'][] = $level;
+                }
+                // Level IDs are not post IDs, so one can equal a real
+                // product's ID; only then is it also sold as a product.
+                if ( !wc_get_product( $id ) ) {
+                    continue;
+                }
+            }
+            $offer['product_ids'][] = $id;
+        }
+        // A product can be stored directly and also grant a plan.
+        $unique = [];
+        foreach ( $offer['product_ids'] as $id ) {
+            $unique[(int) $id] = $id;
+        }
+        $offer['product_ids'] = array_values( $unique );
+        $offer['unlisted_product_ids'] = array_values( $offer['unlisted_product_ids'] );
+        return $offer;
+    }
+
+    /**
+     * Whether WooCommerce's [products] shortcode shows a product. It lists
+     * only products that appear in the shop, so not a variation, and not a
+     * product whose catalog visibility is "Search results only" or "Hidden".
+     *
+     * @param int|string $product_id
+     *
+     * @return bool
+     */
+    protected static function product_list_shows( $product_id ) : bool {
+        $product = wc_get_product( $product_id );
+        return $product && !$product->is_type( 'variation' ) && in_array( $product->get_catalog_visibility(), ['visible', 'catalog'], true );
+    }
+
+    /**
+     * The paywall's way in for membership protection that the product list
+     * cannot show: a checkout link for each Paid Memberships Pro level, a link
+     * to each plan product the list leaves out (a variation, or a product
+     * hidden from the shop), or, when there is nothing at all to buy, a
+     * members-only notice with a login link for visitors who are not logged
+     * in.
+     *
+     * @param array $offer From get_paywall_offer().
+     *
+     * @return string HTML, empty when the product list already covers it.
+     */
+    public static function get_paywall_membership_offer( array $offer ) : string {
+        $html = '';
+        if ( !empty( $offer['pmpro_levels'] ) && class_exists( '\\PRAMADILLO\\INTEGRATIONS\\PaidMembershipsPro' ) ) {
+            $pmpro = new \PRAMADILLO\INTEGRATIONS\PaidMembershipsPro();
+            $html .= '<ul class="wc-ppp-membership-levels">';
+            foreach ( $offer['pmpro_levels'] as $level ) {
+                /* translators: %s: membership level name */
+                $html .= '<li><a href="' . esc_url( $pmpro->get_checkout_url( $level->id ) ) . '">' . esc_html( sprintf( __( 'Join %s', 'wc_pay_per_post' ), $level->name ) ) . '</a></li>';
+            }
+            $html .= '</ul>';
+        }
+        $unlisted = [];
+        foreach ( (array) ($offer['unlisted_product_ids'] ?? []) as $product_id ) {
+            $product = wc_get_product( $product_id );
+            if ( $product ) {
+                /* translators: %s: product name, such as "Course - Gold" */
+                $unlisted[] = '<li><a href="' . esc_url( $product->get_permalink() ) . '">' . esc_html( sprintf( __( 'Buy %s', 'wc_pay_per_post' ), $product->get_name() ) ) . '</a></li>';
+            }
+        }
+        if ( $unlisted ) {
+            $html .= '<ul class="wc-ppp-membership-products">' . implode( '', $unlisted ) . '</ul>';
+        }
+        if ( '' === $html && $offer['has_membership'] && empty( $offer['product_ids'] ) ) {
+            $html .= '<p class="wc-ppp-members-only">' . esc_html__( 'This content is available to members only.', 'wc_pay_per_post' );
+            if ( !is_user_logged_in() ) {
+                $html .= ' <a href="' . esc_url( wp_login_url( get_permalink() ) ) . '">' . esc_html__( 'Already a member? Log in.', 'wc_pay_per_post' ) . '</a>';
+            }
+            $html .= '</p>';
+        }
+        return (string) apply_filters( 'wc_pay_per_post_paywall_membership_offer', $html, $offer );
+    }
+
+    /**
+     * Remove every shortcode that mentions one of the tokens, for when they
+     * would expand to nothing: [products ids=''] lists the whole catalogue.
+     *
+     * @param string   $content
+     * @param string[] $tokens
+     *
+     * @return string
+     */
+    protected static function remove_shortcodes_using_tokens( string $content, array $tokens ) : string {
+        return preg_replace_callback( '/' . get_shortcode_regex() . '/', static function ( $match ) use($tokens) {
+            $uses = static function ( string $text ) use($tokens) : bool {
+                foreach ( $tokens as $token ) {
+                    if ( false !== strpos( $text, $token ) ) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            // [[escaped]] is text, not a shortcode.
+            if ( '[' === $match[1] && ']' === $match[6] ) {
+                return $match[0];
+            }
+            if ( $uses( $match[3] ) ) {
+                return '';
+            }
+            // An enclosing shortcode, such as a members-only wrapper or a
+            // page builder's row, keeps its own text: only the shortcodes
+            // inside it that use a token go.
+            if ( isset( $match[5] ) && '' !== $match[5] && $uses( $match[5] ) ) {
+                return '[' . $match[2] . $match[3] . ']' . self::remove_shortcodes_using_tokens( $match[5], $tokens ) . '[/' . $match[2] . ']';
+            }
+            return $match[0];
+        }, $content );
+    }
+
+    public static function replace_tokens( $paywall_content, $product_ids, $unfiltered_content = null ) {
         if ( is_archive() || is_home() || is_front_page() ) {
             //Get Product IDs
             //TODO this needs to be updated to newest methods that include Elementor
             $product_ids = get_post_meta( get_the_ID(), WC_PPP_SLUG . '_product_ids', true );
         }
-        if ( count( (array) $product_ids ) > 0 ) {
-            $return_content = str_replace( '{{product_id}}', implode( ',', (array) $product_ids ), $paywall_content );
+        $offer = self::get_paywall_offer( $product_ids );
+        $product_ids = $offer['product_ids'];
+        if ( empty( $product_ids ) ) {
+            $return_content = self::remove_shortcodes_using_tokens( (string) $paywall_content, ['{{product_id}}', '{{parent_id}}'] );
+            $return_content = str_replace( ['{{product_id}}', '{{parent_id}}'], '', $return_content );
         } else {
-            $return_content = str_replace( '{{product_id}}', reset( $product_ids ), $paywall_content );
+            $return_content = str_replace( '{{product_id}}', implode( ',', $product_ids ), $paywall_content );
+            $return_content = str_replace( '{{parent_id}}', wp_get_post_parent_id( reset( $product_ids ) ), $return_content );
         }
-        if ( !is_null( $parent_id ) ) {
-            $return_content = str_replace( '{{parent_id}}', $parent_id, $return_content );
+        // {{memberships}} places the membership way in; without it, the way
+        // in follows the message so a message written before it existed
+        // still offers one.
+        $membership_offer = self::get_paywall_membership_offer( $offer );
+        if ( false !== strpos( $return_content, '{{memberships}}' ) ) {
+            $return_content = str_replace( '{{memberships}}', $membership_offer, $return_content );
+        } elseif ( '' !== $membership_offer ) {
+            $return_content .= "\n" . $membership_offer;
         }
         return $return_content;
     }
@@ -610,8 +806,160 @@ class Woocommerce_Pay_Per_Post_Helper extends Woocommerce_Pay_Per_Post {
         return (array) $user_included_post_types;
     }
 
+    /**
+     * Roles that read every protected post without buying it (premium): the
+     * "Other roles that skip the paywall" setting, then the
+     * wc_pay_for_post_allowed_roles filter, which receives the setting.
+     *
+     * @return string[] Role slugs, as values.
+     */
+    public static function paywall_bypass_roles() : array {
+        if ( !self::can_use_premium_protection() ) {
+            return [];
+        }
+        $roles = self::sanitize_roles( get_option( WC_PPP_SLUG . '_paywall_bypass_roles', [] ) );
+        return array_filter( (array) apply_filters( 'wc_pay_for_post_allowed_roles', $roles ), 'is_scalar' );
+    }
+
+    /**
+     * Roles that see the Pay For Post panel or box in the editor: the "Who
+     * can set protection" setting, then the
+     * wc_pay_per_post_allowed_roles_for_meta_box filter. Empty means everyone
+     * who can edit the post.
+     *
+     * The filter has always taken role slugs as keys, so the setting is passed
+     * to it that way.
+     *
+     * @return array<string, true> Role slug => true.
+     */
+    public static function editor_panel_roles() : array {
+        // A ticked role that has since been removed from the site restricts
+        // nothing: if it were the only one, nobody would see the panel.
+        $roles = array_intersect( self::sanitize_roles( get_option( WC_PPP_SLUG . '_editor_panel_roles', [] ) ), array_keys( wp_roles()->roles ) );
+        $roles = array_fill_keys( $roles, true );
+        return (array) apply_filters( 'wc_pay_per_post_allowed_roles_for_meta_box', $roles );
+    }
+
+    /**
+     * A protection type's name, as the post editor box shows it: Buy once,
+     * Free at first, Limited views or Time limited. Admin screens that name a
+     * post's type use it, so the names match the editor everywhere.
+     *
+     * @param string $type standard, delay, page-view or expire.
+     *
+     * @return string The name, or the type itself if it is not one of the four.
+     */
+    public static function protection_type_label( string $type ) : string {
+        $labels = [
+            'standard'  => __( 'Buy once', 'wc_pay_per_post' ),
+            'delay'     => __( 'Free at first', 'wc_pay_per_post' ),
+            'page-view' => __( 'Limited views', 'wc_pay_per_post' ),
+            'expire'    => __( 'Time limited', 'wc_pay_per_post' ),
+        ];
+        return $labels[$type] ?? $type;
+    }
+
+    /**
+     * A list of role slugs from a settings form or the database. Unticking
+     * every role stores an empty string.
+     *
+     * @param mixed $roles Submitted or stored value.
+     *
+     * @return string[]
+     */
+    public static function sanitize_roles( $roles ) : array {
+        // A role registered on the site is kept exactly as it is spelled: a
+        // plugin can register "Teacher", and sanitize_key() would store
+        // "teacher", which no user has.
+        $known = array_keys( wp_roles()->roles );
+        $clean = [];
+        foreach ( (array) $roles as $role ) {
+            if ( !is_scalar( $role ) ) {
+                continue;
+            }
+            $role = (string) $role;
+            $clean[] = ( in_array( $role, $known, true ) ? $role : sanitize_key( $role ) );
+        }
+        return array_values( array_unique( array_filter( $clean, 'strlen' ) ) );
+    }
+
+    /**
+     * Where the purchased content links on an order line show (premium):
+     * "everywhere", "not_in_emails" or "off".
+     *
+     * @return string
+     */
+    public static function order_links_mode() : string {
+        if ( !self::can_use_premium_protection() ) {
+            return 'everywhere';
+        }
+        return self::sanitize_order_links_mode( get_option( WC_PPP_SLUG . '_order_links', 'everywhere' ) );
+    }
+
+    /**
+     * A stored or submitted order_links_mode() value.
+     *
+     * @param mixed $mode Submitted or stored value.
+     *
+     * @return string One of order_links_mode()'s values; anything else is "everywhere".
+     */
+    public static function sanitize_order_links_mode( $mode ) : string {
+        return ( in_array( $mode, ['everywhere', 'not_in_emails', 'off'], true ) ? $mode : 'everywhere' );
+    }
+
+    /**
+     * Whether order lines list the content their product unlocks. The
+     * wc_pay_per_post_show_item_meta filter receives the setting.
+     *
+     * Read when an order line is shown, not while the plugin loads, so the
+     * filter works from a theme too.
+     *
+     * @return bool
+     */
+    public static function show_order_links() : bool {
+        return (bool) apply_filters( 'wc_pay_per_post_show_item_meta', 'off' !== self::order_links_mode() );
+    }
+
+    /**
+     * Whether those links are left out of emails. The
+     * wc_pay_per_post_hide_item_meta_in_email filter receives the setting.
+     *
+     * @return bool
+     */
+    public static function hide_order_links_in_email() : bool {
+        return (bool) apply_filters( 'wc_pay_per_post_hide_item_meta_in_email', 'not_in_emails' === self::order_links_mode() );
+    }
+
+    /**
+     * Whether an email's order details are being rendered: WooCommerce's
+     * order emails, or WooCommerce Subscriptions' own.
+     *
+     * @return bool
+     */
+    public static function is_rendering_email() : bool {
+        return doing_action( 'woocommerce_email_order_details' ) || doing_action( 'woocommerce_subscriptions_email_order_details' );
+    }
+
+    /**
+     * A text a setting can replace, escaped for HTML. Empty means the plugin's
+     * own wording, which stays translatable.
+     *
+     * @param string $option   Option name without the plugin prefix.
+     * @param string $fallback The plugin's wording, already escaped.
+     *
+     * @return string
+     */
+    public static function setting_text( string $option, string $fallback ) : string {
+        $text = ( self::can_use_premium_protection() ? trim( (string) get_option( WC_PPP_SLUG . '_' . $option, '' ) ) : '' );
+        return ( '' === $text ? $fallback : esc_html( $text ) );
+    }
+
     public static function allowed_roles_for_meta_box() : bool {
-        $allowed_roles = apply_filters( 'wc_pay_per_post_allowed_roles_for_meta_box', [] );
+        $allowed_roles = self::editor_panel_roles();
+        // A network's super admins may have no role on the site at all.
+        if ( is_multisite() && is_super_admin() ) {
+            return true;
+        }
         if ( count( $allowed_roles ) == 0 ) {
             $allow_meta = true;
         } else {

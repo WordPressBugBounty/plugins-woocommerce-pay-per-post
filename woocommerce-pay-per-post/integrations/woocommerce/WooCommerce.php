@@ -84,6 +84,12 @@ class WooCommerce {
      */
     public function get_purchased_content_by_product_id( $formatted_meta, $item ) : string {
         Woocommerce_Pay_Per_Post_Helper::logger( 'WooCommerce/get_purchased_content_by_product_id() called' );
+        // Left out of emails by returning the line's own details. Hiding the
+        // links with CSS alone fails on WooCommerce's current email template,
+        // which strips the element the CSS targets.
+        if ( !Woocommerce_Pay_Per_Post_Helper::show_order_links() || Woocommerce_Pay_Per_Post_Helper::is_rendering_email() && Woocommerce_Pay_Per_Post_Helper::hide_order_links_in_email() ) {
+            return (string) $formatted_meta;
+        }
         if ( $item->get_variation_id() > 0 ) {
             $purchased = Woocommerce_Pay_Per_Post_Helper::get_posts_associated_with_product_id( $item->get_variation_id() );
         } else {
@@ -98,7 +104,18 @@ class WooCommerce {
         return $formatted_meta;
     }
 
+    /**
+     * Hides the links in emails rendered outside WooCommerce's order details,
+     * which get_purchased_content_by_product_id() cannot recognise.
+     *
+     * @param string $css Email CSS.
+     *
+     * @return string
+     */
     public static function hide_item_meta_from_email( $css ) : string {
+        if ( !Woocommerce_Pay_Per_Post_Helper::hide_order_links_in_email() ) {
+            return (string) $css;
+        }
         return $css . '.ppp-purchased-content {display:none;}';
     }
 

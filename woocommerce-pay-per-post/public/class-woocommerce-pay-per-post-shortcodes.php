@@ -6,9 +6,66 @@ use PRAMADILLO\Woocommerce_Pay_Per_Post_Restrict_Content;
  * Class Woocommerce_Pay_Per_Post_Shortcodes
  */
 class Woocommerce_Pay_Per_Post_Shortcodes {
+    /** Tag of the premium shortcode that protects a region of a post. */
+    const INLINE_SHORTCODE = 'wc-pay-for-post-inline';
+
     public static function register_shortcodes() {
         add_shortcode( 'woocommerce-payperpost', [__CLASS__, 'process_shortcode'] );
         add_shortcode( 'wc-pay-for-post', [__CLASS__, 'process_shortcode'] );
+        // Without a licence nothing above registers the inline shortcode, but
+        // posts written while licensed still contain it. Unregistered, its tags
+        // and the region inside them would print as plain text, so the region
+        // gets a handler that shows it only to someone with access to the post.
+        // See process_inline_shortcode_unavailable().
+        if ( !shortcode_exists( self::INLINE_SHORTCODE ) ) {
+            add_shortcode( self::INLINE_SHORTCODE, [__CLASS__, 'process_inline_shortcode_unavailable'] );
+        }
+    }
+
+    /**
+     * Whether [wc-pay-for-post-inline] protects its region on this install.
+     *
+     * restrict_content() leaves a post containing an inline region to the
+     * shortcode instead of applying the full-post paywall. That hand-off is
+     * only safe when the premium handler will run: it needs a licence, and
+     * it must be the registered handler.
+     *
+     * @return bool
+     */
+    public static function is_inline_shortcode_available() : bool {
+        global $shortcode_tags;
+        if ( !Woocommerce_Pay_Per_Post_Helper::can_use_premium_protection() ) {
+            return false;
+        }
+        if ( !isset( $shortcode_tags[self::INLINE_SHORTCODE] ) ) {
+            return false;
+        }
+        return [__CLASS__, 'process_inline_shortcode_unavailable'] !== $shortcode_tags[self::INLINE_SHORTCODE];
+    }
+
+    /**
+     * Handles [wc-pay-for-post-inline] when inline protection cannot run
+     * (the free build, or a licence that has lapsed).
+     *
+     * The post then gets the full-post paywall from restrict_content(), the
+     * same fallback to standard protection that can_use_premium_protection()
+     * documents for delay, page-view and expire. This handler covers the
+     * region itself wherever it is rendered: someone with access to the post
+     * gets its content, everyone else gets nothing, so the region is never
+     * shown to a visitor who has not paid, nor quoted in the paywall's
+     * excerpt.
+     *
+     * @param array|string $atts    Shortcode attributes (unused).
+     * @param string       $content The region's content.
+     *
+     * @return string
+     */
+    public static function process_inline_shortcode_unavailable( $atts, $content = '' ) : string {
+        $post_id = get_the_ID();
+        if ( !$post_id || !Woocommerce_Pay_Per_Post_Helper::has_access( $post_id, false ) ) {
+            return '';
+        }
+        return do_shortcode( (string) $content );
     }
 
     public static function process_shortcode( $atts ) {

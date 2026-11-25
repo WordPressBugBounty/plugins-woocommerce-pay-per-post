@@ -25,7 +25,8 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 	 * @param string $url   Full URL of the page they are trying to view.
 	 *
 	 * @return array Structured result: ['error' => string] on failure, otherwise
-	 *               ['user','post','verdict','reason','evidence','environment','warnings'].
+	 *               ['user','post','verdict','reason','evidence','history','focus_order',
+	 *               'page_config','products','environment','warnings','checks'].
 	 */
 	public static function run( string $email, string $url ): array {
 		$email = trim( $email );
@@ -147,20 +148,23 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 			self::flush_request_caches();
 		}
 
+		$history = self::purchase_history(
+			$user,
+			(array) ( $protection['product_ids'] ?? [] ),
+			(string) ( $protection['protection_type'] ?? 'standard' ),
+			$date_order_id,
+			$info['last_purchase_date'] ?? null
+		);
+
 		return [
 			'user'        => $user,
 			'post'        => $post,
 			'verdict'     => (bool) $verdict,
 			'protection'  => $protection,
-			'reason'      => self::explain( (bool) $verdict, $checks, $protection, $info, $post->ID, $user ),
+			'reason'      => self::explain( (bool) $verdict, $checks, $protection, $info, $post->ID, $user, $history ),
 			'evidence'    => self::evidence( $user, $protection, $info, $checks, $post->ID ),
-			'history'     => self::purchase_history(
-				$user,
-				(array) ( $protection['product_ids'] ?? [] ),
-				(string) ( $protection['protection_type'] ?? 'standard' ),
-				$date_order_id,
-				$info['last_purchase_date'] ?? null
-			),
+			'history'     => $history,
+			'focus_order' => self::focus_order( (bool) $verdict, $checks, $protection, $history, $date_order_id ),
 			'page_config' => self::page_configuration( $post->ID ),
 			'products'    => self::product_facts( (array) ( $protection['product_ids'] ?? [] ) ),
 			'versions'    => self::versions(),
@@ -202,7 +206,7 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 	/**
 	 * Turn the check results into the single sentence a support reply needs.
 	 */
-	private static function explain( bool $verdict, array $checks, array $protection, array $info, int $post_id, ?WP_User $user = null ): string {
+	private static function explain( bool $verdict, array $checks, array $protection, array $info, int $post_id, ?WP_User $user = null, array $history = [] ): string {
 		if ( empty( $protection['is_protected'] ) ) {
 			return __( 'This page is not protected by Pay For Post at all, so everyone can see it. If the customer cannot, the cause is elsewhere — a membership plugin, the theme, or caching.', 'wc_pay_per_post' );
 		}
@@ -225,7 +229,7 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 				return __( 'Access granted because this user is an administrator and "allow admins access to protected posts" is enabled in settings — not because of anything they bought.', 'wc_pay_per_post' );
 			}
 			if ( ! empty( $checks['check_if_user_role_has_access'] ) ) {
-				return __( 'Access granted because this user\'s role is allowed to bypass the paywall via the wc_pay_for_post_allowed_roles filter — not because of anything they bought.', 'wc_pay_per_post' );
+				return __( 'Access granted because this user\'s role skips the paywall (Settings > Access, "Other roles that skip the paywall", or the wc_pay_for_post_allowed_roles filter) — not because of anything they bought.', 'wc_pay_per_post' );
 			}
 			if ( ! empty( $checks['check_if_is_subscriber'] ) ) {
 				return __( 'Access granted by an active subscription to one of the products protecting this page.', 'wc_pay_per_post' );
@@ -253,6 +257,22 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 					/* translators: %s: product name(s) */
 					__( 'No access: this customer bought %s on a subscription plan, and holds no active subscription to it. A purchase made on a plan unlocks the page only while its subscription is active or pending cancellation; buying the product one-time unlocks it permanently.', 'wc_pay_per_post' ),
 					implode( ', ', $lapsed )
+				);
+			}
+
+			// An order for the right product that has not been paid, or no
+			// longer is, is the usual answer to "but I bought it". Name it.
+			$unpaid = self::unpaid_order( $history );
+			if ( $unpaid ) {
+				return sprintf(
+					/* translators: 1: order number, 2: product name(s), 3: order status, 4: what that status means */
+					__( 'No access: none of this customer\'s paid orders holds a product that protects this page. Their order #%1$d for %2$s is %3$s, so it %4$s.', 'wc_pay_per_post' ),
+					$unpaid['id'],
+					$unpaid['products'],
+					$unpaid['status_label'],
+					in_array( $unpaid['status'], [ 'pending', 'on-hold', 'checkout-draft' ], true )
+						? __( 'does not count until it is paid', 'wc_pay_per_post' )
+						: __( 'does not count', 'wc_pay_per_post' )
 				);
 			}
 
@@ -285,6 +305,95 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 		}
 
 		return __( 'No access. See the individual checks below for which condition failed.', 'wc_pay_per_post' );
+	}
+
+	/**
+	 * The most recent order that holds a product protecting the page but does
+	 * not count because of its status: unpaid, failed, cancelled or refunded.
+	 *
+	 * @param array $history From purchase_history().
+	 *
+	 * @return array{id: int, status: string, status_label: string, products: string}|null
+	 */
+	private static function unpaid_order( array $history ): ?array {
+		foreach ( (array) ( $history['orders'] ?? [] ) as $order ) {
+			if ( ! empty( $order['qualifies'] ) || empty( $order['status_unpaid'] ) ) {
+				continue;
+			}
+
+			$names = [];
+			foreach ( (array) $order['items'] as $item ) {
+				if ( ! empty( $item['required'] ) ) {
+					$names[] = $item['name'];
+				}
+			}
+
+			if ( $names ) {
+				return [
+					'id'           => (int) $order['id'],
+					'status'       => (string) $order['status'],
+					'status_label' => (string) $order['status_label'],
+					'products'     => implode( ', ', array_unique( $names ) ),
+				];
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * The one order that explains the answer, for the "Open order" button:
+	 * the unpaid order the reason names, the order an expiry window or
+	 * page-view allowance is measured from, or the order that grants access.
+	 * Null when no single order explains it.
+	 *
+	 * @param bool  $verdict       The engine's answer.
+	 * @param array $checks        Check name => answer.
+	 * @param array $protection    The page's protection.
+	 * @param array $history       From purchase_history().
+	 * @param int   $date_order_id The order the engine measured from, or 0.
+	 *
+	 * @return array{id: int, url: string}|null
+	 */
+	private static function focus_order( bool $verdict, array $checks, array $protection, array $history, int $date_order_id ): ?array {
+		$orders = (array) ( $history['orders'] ?? [] );
+		$id     = 0;
+
+		if ( empty( $protection['is_protected'] ) ) {
+			return null;
+		}
+
+		if ( ! $verdict && empty( $checks['check_if_purchased'] ) ) {
+			$unpaid = self::unpaid_order( $history );
+			$id     = $unpaid ? $unpaid['id'] : 0;
+		} elseif ( $date_order_id && in_array( $protection['protection_type'] ?? '', [ 'expire', 'page-view' ], true ) ) {
+			$id = $date_order_id;
+		} elseif ( $verdict && ! empty( $checks['check_if_purchased'] ) && empty( $checks['check_if_admin_user_have_access'] ) && empty( $checks['check_if_user_role_has_access'] ) ) {
+			foreach ( $orders as $order ) {
+				if ( ! empty( $order['qualifies'] ) ) {
+					$id = (int) $order['id'];
+					break;
+				}
+			}
+		}
+
+		if ( ! $id ) {
+			return null;
+		}
+
+		foreach ( $orders as $order ) {
+			if ( (int) $order['id'] === $id ) {
+				return [
+					'id'  => $id,
+					'url' => (string) $order['edit_url'],
+				];
+			}
+		}
+
+		return [
+			'id'  => $id,
+			'url' => Woocommerce_Pay_Per_Post_Protected_Content::order_url( $id ),
+		];
 	}
 
 	/**
@@ -358,7 +467,7 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 			return $rows;
 		}
 
-		$rows[ __( 'Protection type', 'wc_pay_per_post' ) ] = $protection['protection_type'] ?? 'standard';
+		$rows[ __( 'Protection type', 'wc_pay_per_post' ) ] = Woocommerce_Pay_Per_Post_Helper::protection_type_label( (string) ( $protection['protection_type'] ?? 'standard' ) );
 
 		$product_ids   = (array) ( $protection['product_ids'] ?? [] );
 		$products      = [];
@@ -431,7 +540,7 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 		return [
 			__( 'Plugin active (wcppp_is_active)', 'wc_pay_per_post' ) => apply_filters( 'wcppp_is_active', true ) ? __( 'yes', 'wc_pay_per_post' ) : __( 'NO — protection is disabled site-wide', 'wc_pay_per_post' ),
 			__( 'Admins bypass protection', 'wc_pay_per_post' )        => get_option( WC_PPP_SLUG . '_allow_admins_access_to_protected_posts', false ) ? __( 'yes', 'wc_pay_per_post' ) : __( 'no', 'wc_pay_per_post' ),
-			__( 'Roles bypassing paywall', 'wc_pay_per_post' )         => implode( ', ', (array) apply_filters( 'wc_pay_for_post_allowed_roles', [] ) ) ?: __( 'none', 'wc_pay_per_post' ),
+			__( 'Roles bypassing paywall', 'wc_pay_per_post' )         => implode( ', ', Woocommerce_Pay_Per_Post_Helper::paywall_bypass_roles() ) ?: __( 'none', 'wc_pay_per_post' ),
 			__( 'Subscriptions integration', 'wc_pay_per_post' )       => self::describe_subscriptions_integration(),
 			__( 'Memberships integration', 'wc_pay_per_post' )         => Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_memberships() ? __( 'active', 'wc_pay_per_post' ) : __( 'inactive', 'wc_pay_per_post' ),
 			// Order storage decides which purchase-history query runs at all, so a
@@ -651,10 +760,14 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 			}
 
 			$rows[] = [
-				'id'         => $order->get_id(),
-				'date'       => $order->get_date_created() ? $order->get_date_created()->format( 'Y-m-d H:i' ) : '—',
-				'paid'       => $paid ? $paid->format( 'Y-m-d H:i' ) : '—',
-				'status'     => $status,
+				'id'            => $order->get_id(),
+				'edit_url'      => Woocommerce_Pay_Per_Post_Protected_Content::order_url( (int) $order->get_id() ),
+				'date'          => $order->get_date_created() ? $order->get_date_created()->format( 'Y-m-d H:i' ) : '—',
+				'paid'          => $paid ? $paid->format( 'Y-m-d H:i' ) : '—',
+				'status'        => $status,
+				'status_label'  => function_exists( 'wc_get_order_status_name' ) ? wc_get_order_status_name( $status ) : $status,
+				// Holds a product that unlocks the page, and its status alone keeps it from counting.
+				'status_unpaid' => $has_required && $counting_line && ! $status_ok,
 				'attachment' => $attached ? 'account' : ( 0 === (int) $order->get_customer_id() ? 'GUEST' : 'user ' . (int) $order->get_customer_id() ),
 				'total'      => $order->get_total(),
 				'currency'   => $order->get_currency(),
@@ -810,6 +923,15 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 				: __( 'active — but via a compatibility layer, NOT WooCommerce Subscriptions itself', 'wc_pay_per_post' );
 		}
 
+		// The integration needs Premium before the setting or the filter count.
+		if ( $classes_exist && ! Woocommerce_Pay_Per_Post_Helper::can_use_premium_protection() ) {
+			return __( 'inactive — subscription classes ARE present, but the integration needs an active Premium licence', 'wc_pay_per_post' );
+		}
+
+		if ( $classes_exist && ! get_option( WC_PPP_SLUG . '_use_woocommerce_subscriptions', true ) ) {
+			return __( 'inactive — subscription classes ARE present, and "Use WooCommerce Subscriptions" is off under Settings > Integrations', 'wc_pay_per_post' );
+		}
+
 		if ( $classes_exist ) {
 			return __( 'inactive — subscription classes ARE present, so it is switched off by the wc_pay_per_post_can_use_woocommerce_subscriptions filter (that filter is doing its job)', 'wc_pay_per_post' );
 		}
@@ -821,7 +943,7 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 	 * Configurations that are legal but are known to produce exactly the
 	 * support tickets this tool exists to answer.
 	 *
-	 * @return string[]
+	 * @return string[] Guest checkout is under the key 'guest_checkout'.
 	 */
 	public static function warnings( array $product_ids = [] ): array {
 		$warnings = [];
@@ -854,15 +976,25 @@ class Woocommerce_Pay_Per_Post_Access_Diagnostic {
 		if ( Woocommerce_Pay_Per_Post_Helper::can_use_woocommerce_subscriptions()
 		     && ! self::woocommerce_subscriptions_is_really_installed()
 		) {
-			$warnings[] = __( 'The WooCommerce Subscriptions integration is ACTIVE, but WooCommerce Subscriptions itself does not appear to be installed. Another plugin is probably providing a compatibility layer (Flexible Subscriptions by WP Desk does this). That makes Pay For Post treat those products as subscription products, which require an active subscription RECORD and not merely a completed order — a common cause of paying customers being refused. The wc_pay_per_post_can_use_woocommerce_subscriptions filter turns this off.', 'wc_pay_per_post' );
+			$warnings[] = __( 'The WooCommerce Subscriptions integration is ACTIVE, but WooCommerce Subscriptions itself does not appear to be installed. Another plugin is probably providing a compatibility layer (Flexible Subscriptions by WP Desk does this). That makes Pay For Post treat those products as subscription products, which require an active subscription RECORD and not merely a completed order — a common cause of paying customers being refused. Untick "Use WooCommerce Subscriptions" under Settings > Integrations, or use the wc_pay_per_post_can_use_woocommerce_subscriptions filter, to turn this off.', 'wc_pay_per_post' );
+		}
+
+		// Legitimate for content kept for members granted by hand, but a
+		// customer asking how to buy access is asking for something that
+		// does not exist.
+		$offer = Woocommerce_Pay_Per_Post_Helper::get_paywall_offer( $product_ids );
+		if ( $offer['has_membership'] && empty( $offer['product_ids'] ) && empty( $offer['pmpro_levels'] ) ) {
+			$warnings[] = __( 'This page cannot be bought. It is protected only by membership plans or levels that no product sells and that are closed to sign-ups, so its paywall shows a members-only notice instead of something to buy. A customer gets in only once they are given the membership.', 'wc_pay_per_post' );
 		}
 
 		if ( ! apply_filters( 'wcppp_is_active', true ) ) {
 			$warnings[] = __( 'Protection is switched off site-wide by the wcppp_is_active filter. Nothing is protected while that is in place.', 'wc_pay_per_post' );
 		}
 
+		// Keyed so the screen can show it as an error: with guest checkout on
+		// the plugin does not work for anyone who checks out as a guest.
 		if ( 'yes' === get_option( 'woocommerce_enable_guest_checkout' ) ) {
-			$warnings[] = __( 'Guest checkout is ENABLED in WooCommerce. Pay For Post ties access to a user account, so any customer who checks out as a guest will have no account and therefore no access. This is the most common cause of "I paid but I cannot get in".', 'wc_pay_per_post' );
+			$warnings['guest_checkout'] = __( 'Guest checkout is ENABLED in WooCommerce. Pay For Post ties access to a user account, so any customer who checks out as a guest will have no account and therefore no access. This is the most common cause of "I paid but I cannot get in".', 'wc_pay_per_post' );
 		}
 
 		return $warnings;

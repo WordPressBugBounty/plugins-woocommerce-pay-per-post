@@ -1,0 +1,2669 @@
+/*
+ * Pay For Post admin: the app shell used by Settings, Protected Content and
+ * Need Help. Loaded on those screens only, and scoped to them.
+ *
+ * WordPress's own greys, one deep teal accent, violet for Premium only.
+ * Square-ish corners: 4px on panels, 3px on controls, 2px on badges. Every
+ * screen runs the full width of the page. System fonts: the admin loads
+ * nothing remote.
+ */
+
+body.wcppp-app-screen {
+	--wcppp-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	--wcppp-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+	--wcppp-bg: #f0f0f1;
+	--wcppp-surface: #ffffff;
+	--wcppp-surface-2: #f6f7f7;
+	--wcppp-text: #1d2327;
+	--wcppp-text-2: #50575e;
+	--wcppp-text-3: #646970;
+	--wcppp-line: #c3c4c7;
+	--wcppp-line-2: #dcdcde;
+	--wcppp-control: #8c8f94;
+	--wcppp-accent: #0b6577;
+	--wcppp-accent-hover: #08414c;
+	--wcppp-accent-soft: #e7f1f3;
+	--wcppp-premium: #5b21b6;
+	--wcppp-premium-soft: #f5f3ff;
+	--wcppp-premium-line: #c4b5fd;
+	--wcppp-ok: #00611c;
+	--wcppp-ok-soft: #edfaef;
+	--wcppp-ok-line: #68de7c;
+	--wcppp-warn: #6b4b00;
+	--wcppp-warn-soft: #fcf9e8;
+	--wcppp-warn-line: #dba617;
+	--wcppp-err: #b32d2e;
+	--wcppp-err-soft: #fcf0f1;
+	--wcppp-err-line: #f86368;
+	--wcppp-radius: 4px;
+	--wcppp-radius-sm: 3px;
+	--wcppp-radius-xs: 2px;
+	--wcppp-focus: 0 0 0 2px #fff, 0 0 0 4px var(--wcppp-accent);
+	--wcppp-bar-top: 32px;
+	/* WordPress draws checkboxes and radios in its theme colour. */
+	--wp-admin-theme-color: #0b6577;
+	--wp-admin-theme-color-darker-10: #08414c;
+	--wp-admin-theme-color-darker-20: #08414c;
+	background: var(--wcppp-bg);
+}
+
+/* Full-bleed shell: the header runs edge to edge under the admin bar. */
+body.wcppp-app-screen #wpcontent {
+	padding-left: 0;
+	background: var(--wcppp-bg);
+}
+
+body.wcppp-app-screen #wpbody-content {
+	padding-bottom: 40px;
+}
+
+.wcppp-app {
+	margin: 0;
+	font-family: var(--wcppp-font);
+	font-size: 14px;
+	line-height: 1.5;
+	color: var(--wcppp-text);
+}
+
+.wcppp-app *,
+.wcppp-app *::before,
+.wcppp-app *::after {
+	box-sizing: border-box;
+}
+
+.wcppp-app [hidden] {
+	display: none !important;
+}
+
+.wcppp-app a {
+	color: var(--wcppp-accent);
+}
+
+.wcppp-app a:hover {
+	color: var(--wcppp-accent-hover);
+}
+
+.wcppp-app a:focus,
+.wcppp-app button:focus,
+.wcppp-app input:focus,
+.wcppp-app select:focus,
+.wcppp-app textarea:focus,
+.wcppp-app summary:focus {
+	box-shadow: none;
+	outline: none;
+}
+
+.wcppp-app a:focus-visible,
+.wcppp-app button:focus-visible,
+.wcppp-app summary:focus-visible,
+.wcppp-app input[type="checkbox"]:focus-visible,
+.wcppp-app input[type="radio"]:focus-visible,
+.wcppp-app [tabindex]:focus-visible {
+	box-shadow: var(--wcppp-focus);
+	border-radius: var(--wcppp-radius-xs);
+}
+
+.wcppp-app code {
+	font-family: var(--wcppp-mono);
+	font-size: 12px;
+	background: var(--wcppp-bg);
+	border-radius: var(--wcppp-radius-xs);
+	padding: 1px 5px;
+	color: var(--wcppp-text);
+}
+
+.wcppp-app [id] {
+	scroll-margin-top: 120px;
+}
+
+.wcppp-icon {
+	width: 12px;
+	height: 12px;
+	fill: currentColor;
+	flex: none;
+}
+
+.wcppp-app p {
+	margin: 0;
+}
+
+.wcppp-app h2,
+.wcppp-app h3 {
+	color: var(--wcppp-text);
+}
+
+/* Other plugins' notices land under the header. */
+.wcppp-app > .notice,
+.wcppp-app > div.updated,
+.wcppp-app > div.error,
+.wcppp-app > .fs-notice {
+	margin: 16px 24px 0;
+}
+
+/* ------------------------------------------------------------------ header */
+
+.wcppp-head {
+	position: sticky;
+	top: var(--wcppp-bar-top);
+	z-index: 20;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
+	gap: 0 28px;
+	padding: 0 24px;
+	background: var(--wcppp-surface);
+	border-bottom: 1px solid var(--wcppp-line);
+}
+
+.wcppp-brand {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 0;
+	color: var(--wcppp-text) !important;
+	text-decoration: none;
+}
+
+.wcppp-mark {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: var(--wcppp-radius-sm);
+	background: var(--wcppp-accent);
+	color: #fff;
+}
+
+.wcppp-mark .wcppp-icon {
+	width: 16px;
+	height: 16px;
+}
+
+.wcppp-brand-text {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.2;
+}
+
+.wcppp-brand-name {
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.wcppp-brand-sub {
+	font-size: 12px;
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-tabs {
+	display: flex;
+	align-items: stretch;
+}
+
+.wcppp-tabs a {
+	display: flex;
+	align-items: center;
+	padding: 0 14px;
+	border-bottom: 3px solid transparent;
+	color: var(--wcppp-text-2);
+	font-size: 14px;
+	text-decoration: none;
+}
+
+.wcppp-tabs a:hover {
+	color: var(--wcppp-text);
+	border-bottom-color: var(--wcppp-line);
+}
+
+.wcppp-tabs a.is-current {
+	color: var(--wcppp-text);
+	font-weight: 600;
+	border-bottom-color: var(--wcppp-accent);
+}
+
+.wcppp-grow {
+	flex: 1;
+}
+
+.wcppp-plan {
+	align-self: center;
+	padding: 3px 8px;
+	border: 1px solid var(--wcppp-line);
+	border-radius: var(--wcppp-radius-xs);
+	color: var(--wcppp-text-2);
+	font-size: 12px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.wcppp-plan.is-premium {
+	border-color: var(--wcppp-premium-line);
+	background: var(--wcppp-premium-soft);
+	color: var(--wcppp-premium);
+}
+
+.wcppp-plan a {
+	font-weight: 600;
+}
+
+/* -------------------------------------------------------------- page body */
+
+.wcppp-body {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	padding: 24px;
+}
+
+.wcppp-titlebar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 12px 24px;
+}
+
+.wcppp-app .wcppp-h1 {
+	margin: 0;
+	padding: 0;
+	font-size: 23px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.wcppp-sub {
+	margin-top: 2px !important;
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-back {
+	display: inline-block;
+	margin-bottom: 4px;
+	text-decoration: none;
+}
+
+.wcppp-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.wcppp-stack-sm {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.wcppp-end {
+	margin-left: auto;
+}
+
+.wcppp-muted {
+	color: var(--wcppp-text-3);
+}
+
+.wcppp-app .wcppp-notice {
+	margin: 0;
+}
+
+/* Underlined views under the title, as on Need Help. */
+.wcppp-subnav {
+	display: flex;
+	flex-wrap: wrap;
+	border-bottom: 1px solid var(--wcppp-line);
+}
+
+.wcppp-subnav a {
+	margin-bottom: -1px;
+	padding: 10px 16px 9px;
+	border-bottom: 3px solid transparent;
+	color: var(--wcppp-text-2);
+	text-decoration: none;
+}
+
+.wcppp-subnav a:hover {
+	color: var(--wcppp-text);
+	border-bottom-color: var(--wcppp-line);
+}
+
+.wcppp-subnav a.is-current {
+	color: var(--wcppp-text);
+	font-weight: 600;
+	border-bottom-color: var(--wcppp-accent);
+}
+
+/* ------------------------------------------------------- buttons, inputs */
+
+.wcppp-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-height: 34px;
+	padding: 6px 14px;
+	border: 1px solid var(--wcppp-accent);
+	border-radius: var(--wcppp-radius-sm);
+	background: var(--wcppp-surface);
+	color: var(--wcppp-accent) !important;
+	font: inherit;
+	font-weight: 600;
+	line-height: 1.3;
+	text-decoration: none;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.wcppp-btn:hover {
+	background: var(--wcppp-accent-soft);
+	color: var(--wcppp-accent-hover) !important;
+}
+
+.wcppp-btn.is-primary {
+	background: var(--wcppp-accent);
+	color: #fff !important;
+}
+
+.wcppp-btn.is-primary:hover {
+	border-color: var(--wcppp-accent-hover);
+	background: var(--wcppp-accent-hover);
+}
+
+.wcppp-btn.is-danger {
+	border-color: var(--wcppp-err);
+	color: var(--wcppp-err) !important;
+}
+
+.wcppp-btn.is-danger:hover {
+	background: var(--wcppp-err-soft);
+}
+
+.wcppp-btn.is-ghost {
+	border-color: transparent;
+	background: none;
+}
+
+.wcppp-btn.is-ghost:hover {
+	border-color: var(--wcppp-line);
+}
+
+.wcppp-btn.is-small {
+	min-height: 28px;
+	padding: 3px 10px;
+	font-size: 13px;
+}
+
+.wcppp-btn[disabled] {
+	opacity: .5;
+	cursor: default;
+}
+
+.wcppp-btn-group {
+	display: inline-flex;
+	gap: 8px;
+}
+
+.wcppp-btn-group form {
+	margin: 0;
+}
+
+.wcppp-app .wcppp-input,
+.wcppp-app .wcppp-select {
+	min-height: 36px;
+	padding: 6px 10px;
+	border: 1px solid var(--wcppp-control);
+	border-radius: var(--wcppp-radius-sm);
+	background-color: var(--wcppp-surface);
+	color: var(--wcppp-text);
+	font: inherit;
+	line-height: 1.4;
+	box-shadow: none;
+}
+
+.wcppp-app .wcppp-input {
+	width: 100%;
+}
+
+.wcppp-app .wcppp-select {
+	max-width: 100%;
+	min-width: 220px;
+	padding-right: 28px;
+}
+
+/* WordPress draws the arrow as a background image; keep it to one. */
+.wcppp-app .wcppp-select:disabled {
+	background-color: var(--wcppp-surface-2);
+	background-repeat: no-repeat;
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-app .wcppp-input:focus,
+.wcppp-app .wcppp-select:focus {
+	border-color: var(--wcppp-accent);
+	box-shadow: 0 0 0 1px var(--wcppp-accent);
+}
+
+.wcppp-mono {
+	font-family: var(--wcppp-mono) !important;
+	font-size: 13px !important;
+}
+
+.wcppp-field-label {
+	display: block;
+	margin-bottom: 6px;
+	font-weight: 600;
+}
+
+.wcppp-help {
+	color: var(--wcppp-text-2);
+	font-size: 13px;
+}
+
+.wcppp-inline {
+	display: flex;
+	gap: 8px;
+}
+
+.wcppp-inline .wcppp-input {
+	flex: 1;
+	min-width: 0;
+}
+
+.wcppp-app input[type="checkbox"],
+.wcppp-app input[type="radio"] {
+	accent-color: var(--wcppp-accent);
+}
+
+/* A setting's checkbox, with "On" beside it. */
+.wcppp-on {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	gap: 8px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.wcppp-app .wcppp-on input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+	margin: 0;
+}
+
+.wcppp-on.is-locked {
+	color: var(--wcppp-text-3);
+	cursor: default;
+}
+
+/* A choice of several, each with what it does. */
+.wcppp-radios,
+.wcppp-checklist {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.wcppp-radios label,
+.wcppp-checklist label {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	cursor: pointer;
+}
+
+/* The choice on one line, what it does under it. */
+.wcppp-radios label {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 0 10px;
+}
+
+.wcppp-radios label > :not(input) {
+	grid-column: 2;
+}
+
+.wcppp-app .wcppp-radios input,
+.wcppp-app .wcppp-checklist input {
+	flex: none;
+	margin: 2px 0 0;
+}
+
+.wcppp-radios b {
+	display: block;
+	font-weight: 600;
+}
+
+.wcppp-radios span {
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-radios b,
+.wcppp-checklist span {
+	color: var(--wcppp-text);
+}
+
+.wcppp-radios label.is-locked {
+	cursor: default;
+	opacity: .7;
+}
+
+.wcppp-checklist.is-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	gap: 10px 24px;
+}
+
+/* ------------------------------------------------------------------ badges */
+
+.wcppp-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 1px 7px;
+	border: 1px solid var(--wcppp-line);
+	border-radius: var(--wcppp-radius-xs);
+	background: var(--wcppp-surface-2);
+	color: var(--wcppp-text-2);
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.5;
+	vertical-align: middle;
+	white-space: nowrap;
+	text-decoration: none;
+}
+
+.wcppp-badge.is-ok {
+	border-color: var(--wcppp-ok-line);
+	background: var(--wcppp-ok-soft);
+	color: var(--wcppp-ok);
+}
+
+.wcppp-badge.is-warn {
+	border-color: var(--wcppp-warn-line);
+	background: var(--wcppp-warn-soft);
+	color: var(--wcppp-warn);
+}
+
+.wcppp-badge.is-err {
+	border-color: var(--wcppp-err-line);
+	background: var(--wcppp-err-soft);
+	color: var(--wcppp-err);
+}
+
+.wcppp-badge.is-premium {
+	border-color: var(--wcppp-premium-line);
+	background: var(--wcppp-premium-soft);
+	color: var(--wcppp-premium);
+}
+
+a.wcppp-badge.is-premium {
+	text-decoration: none;
+}
+
+a.wcppp-badge.is-premium:hover,
+a.wcppp-badge.is-premium:focus {
+	border-color: var(--wcppp-premium);
+	background: var(--wcppp-premium);
+	color: #fff;
+}
+
+.wcppp-badge.is-accent {
+	border-color: var(--wcppp-accent);
+	background: var(--wcppp-surface);
+	color: var(--wcppp-accent);
+}
+
+.wcppp-badge.is-mute {
+	font-weight: 500;
+}
+
+/* A one-line message with an icon, inside or between panels. */
+.wcppp-alert {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 14px;
+	padding: 12px 16px;
+	border: 1px solid var(--wcppp-line);
+	border-left-width: 4px;
+	border-radius: var(--wcppp-radius);
+	background: var(--wcppp-surface);
+}
+
+.wcppp-alert > .wcppp-icon {
+	width: 16px;
+	height: 16px;
+}
+
+.wcppp-alert > p,
+.wcppp-alert > span {
+	flex: 1 1 320px;
+}
+
+.wcppp-alert form {
+	margin: 0;
+}
+
+.wcppp-alert.is-warn {
+	border-color: var(--wcppp-warn-line);
+	background: var(--wcppp-warn-soft);
+}
+
+.wcppp-alert.is-warn > .wcppp-icon {
+	color: var(--wcppp-warn);
+}
+
+/* Something that stops the plugin working, such as guest checkout. */
+.wcppp-alert.is-err {
+	border-color: var(--wcppp-err-line);
+	border-left-color: var(--wcppp-err);
+	background: var(--wcppp-err-soft);
+	color: var(--wcppp-err);
+}
+
+.wcppp-alert.is-err > .wcppp-icon {
+	color: var(--wcppp-err);
+}
+
+.wcppp-alert.is-err a:not(.wcppp-btn) {
+	color: var(--wcppp-err);
+	font-weight: 600;
+}
+
+.wcppp-btn.is-danger-fill {
+	border-color: var(--wcppp-err);
+	background: var(--wcppp-err);
+	color: #fff !important;
+}
+
+.wcppp-btn.is-danger-fill:hover {
+	border-color: #8a2424;
+	background: #8a2424;
+}
+
+/* ---------------------------------------------------------------- panels */
+
+.wcppp-card,
+.wcppp-panel {
+	min-width: 0;
+	border: 1px solid var(--wcppp-line);
+	border-radius: var(--wcppp-radius);
+	background: var(--wcppp-surface);
+}
+
+.wcppp-card-head {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 16px 20px;
+	border-bottom: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-card-head.is-row {
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 16px;
+}
+
+.wcppp-card-head h2,
+.wcppp-pane-head h2 {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.35;
+}
+
+.wcppp-card-head p,
+.wcppp-pane-head p {
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-card-body {
+	padding: 16px 20px 20px;
+}
+
+.wcppp-card.is-danger {
+	border-color: var(--wcppp-err);
+}
+
+.wcppp-card.is-danger .wcppp-card-head h2 {
+	color: var(--wcppp-err);
+}
+
+.wcppp-app .wcppp-h3 {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 4px;
+	font-size: 15px;
+	font-weight: 600;
+}
+
+/* --------------------------------------------------------------- settings */
+
+.wcppp-settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	margin: 0;
+}
+
+.wcppp-sectabs {
+	display: flex;
+	flex-wrap: wrap;
+	padding: 0 12px;
+	border-bottom: 1px solid var(--wcppp-line);
+}
+
+.wcppp-sectabs a {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: -1px;
+	padding: 14px 16px 11px;
+	border-bottom: 3px solid transparent;
+	color: var(--wcppp-text-2);
+	text-decoration: none;
+}
+
+.wcppp-sectabs a:hover {
+	color: var(--wcppp-text);
+	border-bottom-color: var(--wcppp-line);
+}
+
+.wcppp-sectabs a.is-current {
+	color: var(--wcppp-text);
+	font-weight: 600;
+	border-bottom-color: var(--wcppp-accent);
+}
+
+.wcppp-sectabs .wcppp-badge {
+	font-weight: 500;
+}
+
+.wcppp-pane-head {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 20px 24px;
+	border-bottom: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-pane-head h2 {
+	font-size: 17px;
+}
+
+/* One setting: what it does on the left, its control on the right. */
+.wcppp-row {
+	display: flex;
+	align-items: center;
+	gap: 16px 32px;
+	margin: 0;
+	padding: 20px 24px;
+	border: 0;
+	border-bottom: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-pane > .wcppp-row:last-child,
+.wcppp-pane > div:last-child > .wcppp-row:last-child {
+	border-bottom: 0;
+}
+
+fieldset.wcppp-row {
+	min-width: 0;
+}
+
+/* A legend sits on the fieldset's top edge, outside its padding, unless it
+   floats; floated, it lines up with the titles of the other rows. */
+fieldset.wcppp-row > legend.wcppp-row-title {
+	float: left;
+	width: 100%;
+}
+
+fieldset.wcppp-row > legend.wcppp-row-title + * {
+	clear: both;
+}
+
+fieldset.wcppp-row-stack > legend.wcppp-row-title + .wcppp-row-desc {
+	margin-top: 4px;
+}
+
+.wcppp-row-stack {
+	display: block;
+}
+
+.wcppp-row-stack > * + * {
+	margin-top: 10px;
+}
+
+.wcppp-row-text {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.wcppp-row-title {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	float: none;
+	margin: 0;
+	padding: 0;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--wcppp-text);
+}
+
+.wcppp-row-desc {
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-row-actions {
+	margin: 8px 0 0;
+}
+
+.wcppp-row.is-locked .wcppp-row-title {
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-row.is-danger .wcppp-row-title {
+	color: var(--wcppp-err);
+}
+
+.wcppp-row.wcppp-int.is-off .wcppp-row-title {
+	color: var(--wcppp-text-2);
+}
+
+/* A group of settings within a pane. */
+.wcppp-app .wcppp-pane-sub {
+	margin: 0;
+	padding: 12px 24px;
+	border-bottom: 1px solid var(--wcppp-line-2);
+	background: var(--wcppp-surface-2);
+	color: var(--wcppp-text);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+/* A text setting's field, in the control column. */
+.wcppp-app .wcppp-row-input {
+	flex: none;
+	width: 320px;
+	max-width: 100%;
+}
+
+.wcppp-ctl-group {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	gap: 12px;
+}
+
+.wcppp-premium-note {
+	padding: 10px 14px;
+	border: 1px solid var(--wcppp-premium-line);
+	border-radius: var(--wcppp-radius);
+	background: var(--wcppp-premium-soft);
+	color: var(--wcppp-text) !important;
+}
+
+.wcppp-premium-note a {
+	font-weight: 600;
+	color: var(--wcppp-premium);
+}
+
+/* Paywall: the message on the left, a live preview on the right. */
+.wcppp-paywall-split {
+	display: grid;
+	grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+	align-items: stretch;
+	gap: 32px;
+}
+
+.wcppp-paywall-editor,
+.wcppp-paywall-preview {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	min-width: 0;
+}
+
+.wcppp-paywall-editor .wp-editor-wrap {
+	border: 1px solid var(--wcppp-control);
+	border-radius: var(--wcppp-radius-sm);
+	overflow: hidden;
+}
+
+.wcppp-paywall-editor .wp-editor-container {
+	border: 0;
+}
+
+.wcppp-tokens {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+}
+
+.wcppp-tokens caption {
+	padding-bottom: 6px;
+	font-weight: 600;
+	text-align: left;
+}
+
+.wcppp-tokens th,
+.wcppp-tokens td {
+	padding: 7px 12px 7px 0;
+	border-top: 1px solid var(--wcppp-line-2);
+	font-weight: 400;
+	text-align: left;
+	vertical-align: middle;
+}
+
+.wcppp-tokens tr:last-child th,
+.wcppp-tokens tr:last-child td {
+	border-bottom: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-tokens th {
+	white-space: nowrap;
+}
+
+.wcppp-tokens td {
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-tokens .wcppp-tokens-action {
+	padding-right: 0;
+	text-align: right;
+}
+
+.wcppp-preview-empty {
+	display: flex;
+	flex: 1;
+	align-items: center;
+	justify-content: center;
+	min-height: 200px;
+	padding: 24px;
+	border: 1px dashed var(--wcppp-control);
+	border-radius: var(--wcppp-radius-sm);
+	color: var(--wcppp-text-2);
+	text-align: center;
+}
+
+.wcppp-preview:not([hidden]) ~ .wcppp-preview-empty,
+.wcppp-paywall-preview:has(.wcppp-preview:not([hidden])) .wcppp-preview-empty {
+	flex: none;
+	min-height: 0;
+	padding: 0;
+	border: 0;
+	justify-content: flex-start;
+	text-align: left;
+	font-size: 13px;
+}
+
+.wcppp-preview {
+	flex: 1;
+	border: 1px solid var(--wcppp-line);
+	border-radius: var(--wcppp-radius-sm);
+	overflow: hidden;
+}
+
+.wcppp-preview-frame {
+	display: block;
+	width: 100%;
+	height: 100%;
+	min-height: 380px;
+	border: 0;
+	background: #fff;
+}
+
+/* Save bar: always there, so Save works without JavaScript. */
+.wcppp-savebar {
+	position: sticky;
+	bottom: 0;
+	z-index: 10;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px 16px;
+	padding: 12px 24px;
+	border: 1px solid var(--wcppp-line);
+	border-radius: var(--wcppp-radius);
+	background: var(--wcppp-surface);
+}
+
+.wcppp-savebar-msg {
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-savebar.is-dirty {
+	border-color: var(--wcppp-warn-line);
+	background: var(--wcppp-warn-soft);
+}
+
+.wcppp-savebar.is-dirty .wcppp-savebar-msg {
+	color: var(--wcppp-warn);
+	font-weight: 600;
+}
+
+/* --------------------------------------------------------- shared lists */
+
+.wcppp-kv {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+}
+
+.wcppp-kv > div {
+	display: grid;
+	grid-template-columns: minmax(140px, 220px) minmax(0, 1fr);
+	gap: 4px 16px;
+	padding: 8px 0;
+	border-bottom: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-kv > div:last-child {
+	border-bottom: 0;
+}
+
+.wcppp-kv dt {
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-kv dd {
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.wcppp-copy-source {
+	position: absolute;
+	left: -9999px;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+}
+
+.wcppp-table-wrap {
+	overflow-x: auto;
+}
+
+.wcppp-app .wcppp-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+}
+
+.wcppp-app .wcppp-table th,
+.wcppp-app .wcppp-table td {
+	padding: 9px 12px;
+	border-bottom: 1px solid var(--wcppp-line-2);
+	text-align: left;
+	vertical-align: top;
+}
+
+.wcppp-app .wcppp-table thead th {
+	border-bottom-color: var(--wcppp-line);
+	background: var(--wcppp-surface-2);
+	color: var(--wcppp-text-2);
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.wcppp-app .wcppp-table tbody tr:last-child td,
+.wcppp-app .wcppp-table tbody tr:last-child th {
+	border-bottom: 0;
+}
+
+.wcppp-star {
+	color: #996800;
+}
+
+.wcppp-linklist,
+.wcppp-plain-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.wcppp-linklist li {
+	margin: 0;
+}
+
+.wcppp-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 40px 24px;
+	color: var(--wcppp-text-2);
+	text-align: center;
+}
+
+.wcppp-empty strong {
+	color: var(--wcppp-text);
+}
+
+.wcppp-empty-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	margin-bottom: 4px;
+	border-radius: var(--wcppp-radius);
+	background: var(--wcppp-bg);
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-empty-icon .wcppp-icon {
+	width: 18px;
+	height: 18px;
+}
+
+/* ----------------------------------------------------- Need Help: start */
+
+.wcppp-help-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 20px;
+	align-items: stretch;
+}
+
+.wcppp-help-grid > .wcppp-card {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+}
+
+.wcppp-help-grid .wcppp-card-body {
+	flex: 1;
+}
+
+.wcppp-site-grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	margin: 0;
+}
+
+.wcppp-site-grid > div {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 14px 20px;
+	border-right: 1px solid var(--wcppp-line-2);
+	border-bottom: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-site-grid > div:nth-child(4n),
+.wcppp-site-grid > div:last-child {
+	border-right: 0;
+}
+
+.wcppp-site-grid > div:last-child {
+	grid-column: 1 / -1;
+}
+
+.wcppp-site-grid > div:nth-child(4n + 2):last-child {
+	grid-column: span 3;
+}
+
+.wcppp-site-grid > div:nth-child(4n + 3):last-child {
+	grid-column: span 2;
+}
+
+.wcppp-site-grid > div:nth-child(4n):last-child {
+	grid-column: auto;
+}
+
+.wcppp-site-grid dt {
+	color: var(--wcppp-text-2);
+	font-size: 13px;
+}
+
+.wcppp-site-grid dd {
+	margin: 0;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.wcppp-newstrip {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 16px;
+	padding: 14px 20px;
+	border: 1px solid var(--wcppp-line);
+	border-left: 4px solid var(--wcppp-accent);
+	border-radius: var(--wcppp-radius);
+	background: var(--wcppp-surface);
+}
+
+.wcppp-newstrip span {
+	flex: 1 1 360px;
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-debug-alert .wcppp-btn {
+	flex: none;
+}
+
+/* ----------------------------------------------- Need Help: check access */
+
+.wcppp-checkform {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 16px 20px;
+}
+
+.wcppp-checkform-fields {
+	display: grid;
+	grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto;
+	align-items: end;
+	gap: 16px;
+}
+
+.wcppp-verdict {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 16px 20px;
+	padding: 20px 24px;
+	border-bottom: 1px solid var(--wcppp-line-2);
+	border-left: 6px solid var(--wcppp-err);
+	border-radius: var(--wcppp-radius) var(--wcppp-radius) 0 0;
+	background: var(--wcppp-err-soft);
+}
+
+.wcppp-verdict.is-ok {
+	border-left-color: var(--wcppp-ok);
+	background: var(--wcppp-ok-soft);
+}
+
+.wcppp-verdict-icon {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border-radius: var(--wcppp-radius);
+	background: var(--wcppp-err);
+	color: #fff;
+}
+
+.wcppp-verdict.is-ok .wcppp-verdict-icon {
+	background: var(--wcppp-ok);
+}
+
+.wcppp-verdict-icon .wcppp-icon {
+	width: 20px;
+	height: 20px;
+}
+
+.wcppp-verdict-text {
+	display: flex;
+	flex: 1 1 420px;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.wcppp-verdict-text h2 {
+	margin: 0;
+	font-size: 22px;
+	font-weight: 600;
+	line-height: 1.25;
+}
+
+.wcppp-verdict.is-ok h2 {
+	color: var(--wcppp-ok);
+}
+
+.wcppp-verdict.is-err h2 {
+	color: var(--wcppp-err);
+}
+
+.wcppp-who {
+	color: var(--wcppp-text-2);
+	overflow-wrap: anywhere;
+}
+
+.wcppp-who b {
+	color: var(--wcppp-text);
+}
+
+.wcppp-reason {
+	margin-top: 4px !important;
+	font-size: 15px;
+	line-height: 1.55;
+}
+
+.wcppp-verdict-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.wcppp-result > .wcppp-notice,
+.wcppp-result > .wcppp-alert {
+	margin: 16px 24px 0 !important;
+}
+
+.wcppp-result-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+
+.wcppp-result-checks,
+.wcppp-result-orders {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+	padding: 20px 24px;
+}
+
+.wcppp-result-checks {
+	border-right: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-app .wcppp-checks {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 4px 0 0;
+	padding: 0;
+	list-style: none;
+	counter-reset: wcppp-check;
+}
+
+.wcppp-checks li {
+	display: grid;
+	grid-template-columns: 24px minmax(0, 1fr) auto;
+	align-items: start;
+	gap: 10px;
+	margin: 0;
+	padding: 10px 12px;
+	border: 1px solid var(--wcppp-line-2);
+	border-radius: var(--wcppp-radius-sm);
+	counter-increment: wcppp-check;
+}
+
+.wcppp-checks li.is-fail {
+	border-color: var(--wcppp-err-line);
+	background: var(--wcppp-err-soft);
+}
+
+.wcppp-checks li.is-skip {
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-check-ic {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	color: var(--wcppp-text-3);
+}
+
+.wcppp-check-ic .wcppp-icon {
+	width: 14px;
+	height: 14px;
+}
+
+.wcppp-checks li.is-pass .wcppp-check-ic {
+	color: var(--wcppp-ok);
+}
+
+.wcppp-checks li.is-fail .wcppp-check-ic {
+	color: var(--wcppp-err);
+}
+
+.wcppp-check-text {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	min-width: 0;
+}
+
+.wcppp-check-text b::before {
+	content: counter(wcppp-check) ". ";
+}
+
+.wcppp-checks li.is-skip .wcppp-check-text b {
+	font-weight: 500;
+}
+
+.wcppp-check-text > span:not(.wcppp-badge) {
+	color: var(--wcppp-text-2);
+	font-size: 13px;
+}
+
+.wcppp-check-text .wcppp-badge {
+	margin-top: 4px;
+}
+
+.wcppp-check-answer {
+	color: var(--wcppp-text-2);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.wcppp-unlocks {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 8px;
+	padding: 12px 14px;
+	border: 1px solid var(--wcppp-line-2);
+	border-radius: var(--wcppp-radius-sm);
+	background: var(--wcppp-surface-2);
+}
+
+.wcppp-acc {
+	border-top: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-acc details {
+	border-bottom: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-acc details:last-child {
+	border-bottom: 0;
+}
+
+.wcppp-acc summary {
+	padding: 14px 24px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.wcppp-acc summary:hover {
+	background: var(--wcppp-surface-2);
+}
+
+.wcppp-acc details > div {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 0 24px 18px;
+}
+
+.wcppp-report {
+	min-height: 260px;
+}
+
+/* ---------------------------------------------- Need Help: status, tools */
+
+.wcppp-tools-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 20px;
+	align-items: start;
+}
+
+.wcppp-app .wcppp-status-table th {
+	width: 38%;
+	color: var(--wcppp-text-2);
+	font-weight: 400;
+}
+
+.wcppp-app .wcppp-status-table th,
+.wcppp-app .wcppp-status-table td {
+	padding: 10px 20px;
+}
+
+.wcppp-tool {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px 24px;
+	padding: 16px 20px;
+	border-bottom: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-tool:last-child {
+	border-bottom: 0;
+}
+
+.wcppp-tool > div {
+	flex: 1 1 280px;
+	min-width: 0;
+}
+
+.wcppp-tool p {
+	margin-top: 2px;
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-tool form {
+	margin: 0;
+}
+
+/* Need Help > Debug log. */
+.wcppp-log-card .wcppp-card-head h2 {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.wcppp-log-path {
+	word-break: break-all;
+}
+
+.wcppp-log-card .wcppp-help {
+	margin: 0 0 12px;
+}
+
+.wcppp-log {
+	height: 65vh;
+	min-height: 420px;
+	border-color: #1d2327 !important;
+	background: #1d2327 !important;
+	color: #f0f0f1 !important;
+	font-size: 12px !important;
+	line-height: 1.6;
+	white-space: pre;
+}
+
+/* ----------------------------------------------------------- Need Help: docs */
+
+.wcppp-docsearch {
+	display: flex;
+	gap: 8px;
+	margin: 0;
+}
+
+.wcppp-dochero {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 24px;
+}
+
+.wcppp-dochero h2 {
+	margin: 0;
+	font-size: 20px;
+	font-weight: 600;
+}
+
+.wcppp-app .wcppp-dochero .wcppp-input {
+	min-height: 44px;
+	font-size: 15px;
+}
+
+.wcppp-dochero .wcppp-btn {
+	min-height: 44px;
+	padding: 6px 22px;
+}
+
+.wcppp-dochero-intro {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	color: var(--wcppp-text-2);
+	font-size: 13px;
+}
+
+.wcppp-docsections {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.wcppp-app .wcppp-steps {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 12px;
+	margin: 0 0 14px;
+	padding: 0;
+	list-style: none;
+	counter-reset: wcppp-step;
+}
+
+.wcppp-steps li {
+	margin: 0;
+	counter-increment: wcppp-step;
+}
+
+.wcppp-steps a {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	height: 100%;
+	padding: 14px 16px;
+	border: 1px solid var(--wcppp-line);
+	border-radius: var(--wcppp-radius);
+	color: var(--wcppp-text);
+	text-decoration: none;
+}
+
+.wcppp-steps a::before {
+	content: "Step " counter(wcppp-step);
+	color: var(--wcppp-accent);
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+}
+
+.wcppp-steps a:hover {
+	border-color: var(--wcppp-accent);
+	box-shadow: inset 0 -3px 0 var(--wcppp-accent);
+}
+
+.wcppp-steps b {
+	color: var(--wcppp-accent);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.wcppp-steps span {
+	color: var(--wcppp-text-2);
+	font-size: 13px;
+}
+
+.wcppp-doccols {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 20px 32px;
+}
+
+.wcppp-app .wcppp-docgroup {
+	margin: 0 0 8px;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.wcppp-docpanels .wcppp-docgroup {
+	margin-top: 14px;
+}
+
+.wcppp-docpanels .wcppp-docgroup:first-child {
+	margin-top: 0;
+}
+
+.wcppp-app .wcppp-doclist {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.wcppp-doclist li {
+	margin: 0;
+	line-height: 1.4;
+}
+
+.wcppp-doclist small {
+	display: block;
+	color: var(--wcppp-text-2);
+	font-size: 12px;
+}
+
+.wcppp-doclist + .wcppp-doclist {
+	margin-top: 8px;
+	padding-top: 12px;
+	border-top: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-docpanels {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 20px;
+	align-items: start;
+}
+
+/* A page: the list of pages, the page, and its sections. */
+.wcppp-docs {
+	display: grid;
+	grid-template-columns: 250px minmax(0, 1fr);
+	gap: 20px;
+	align-items: start;
+}
+
+.wcppp-docs.has-toc {
+	grid-template-columns: 250px minmax(0, 1fr) 220px;
+}
+
+.wcppp-docnav,
+.wcppp-doctoc {
+	position: sticky;
+	top: calc(var(--wcppp-bar-top) + 76px);
+	max-height: calc(100vh - var(--wcppp-bar-top) - 96px);
+	overflow-y: auto;
+}
+
+.wcppp-docnav {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 12px;
+	border: 1px solid var(--wcppp-line);
+	border-radius: var(--wcppp-radius);
+	background: var(--wcppp-surface);
+}
+
+.wcppp-docnav-links {
+	display: flex;
+	flex-direction: column;
+}
+
+.wcppp-docnav-links a {
+	display: block;
+	padding: 5px 10px;
+	border-radius: var(--wcppp-radius-sm);
+	color: var(--wcppp-text);
+	font-size: 13px;
+	line-height: 1.35;
+	text-decoration: none;
+}
+
+.wcppp-docnav-links a:hover {
+	background: var(--wcppp-bg);
+	color: var(--wcppp-text);
+}
+
+.wcppp-docnav-links a.is-current {
+	background: var(--wcppp-accent);
+	color: #fff;
+	font-weight: 600;
+}
+
+.wcppp-docnav-links .wcppp-docnav-home {
+	margin-bottom: 4px;
+	font-weight: 600;
+	color: var(--wcppp-accent);
+}
+
+.wcppp-docnav details {
+	border-top: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-docnav summary {
+	padding: 8px 4px;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.wcppp-docnav details > div {
+	display: flex;
+	flex-direction: column;
+	padding-bottom: 8px;
+}
+
+.wcppp-docnav-group {
+	margin: 8px 10px 2px;
+	color: var(--wcppp-text-3);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.wcppp-docback {
+	display: none;
+}
+
+.wcppp-docmain {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-width: 0;
+}
+
+.wcppp-docpage {
+	padding: 28px 40px 32px;
+}
+
+.wcppp-crumbs {
+	margin-bottom: 12px !important;
+	color: var(--wcppp-text-2);
+	font-size: 13px;
+}
+
+.wcppp-doctoc {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 4px 0;
+}
+
+.wcppp-doctoc-label {
+	margin: 12px 0 4px;
+	padding-left: 12px;
+	color: var(--wcppp-text-3);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.wcppp-doctoc-label:first-child {
+	margin-top: 0;
+}
+
+.wcppp-doctoc a {
+	padding: 3px 12px;
+	border-left: 2px solid var(--wcppp-line-2);
+	color: var(--wcppp-text-2);
+	font-size: 13px;
+	text-decoration: none;
+}
+
+.wcppp-doctoc a:hover {
+	border-left-color: var(--wcppp-accent);
+	color: var(--wcppp-text);
+}
+
+/* The page itself: larger type, steps as numbered blocks, checks as callouts. */
+.wcppp-app .wcppp-doc {
+	color: var(--wcppp-text);
+	font-size: 16px;
+	line-height: 1.7;
+}
+
+.wcppp-app .wcppp-doc > * + * {
+	margin-top: 14px;
+}
+
+.wcppp-app .wcppp-doc h1 {
+	margin: 0;
+	padding: 0;
+	font-size: 28px;
+	font-weight: 600;
+	line-height: 1.25;
+}
+
+.wcppp-app .wcppp-doc h1 + p {
+	color: var(--wcppp-text-2);
+	font-size: 18px;
+	line-height: 1.6;
+}
+
+.wcppp-app .wcppp-doc h2 {
+	margin-top: 36px;
+	padding: 0;
+	font-size: 21px;
+	font-weight: 600;
+	line-height: 1.3;
+	scroll-margin-top: calc(var(--wcppp-bar-top) + 76px);
+}
+
+.wcppp-app .wcppp-doc h3,
+.wcppp-app .wcppp-doc h4 {
+	margin-top: 24px;
+	font-size: 17px;
+	font-weight: 600;
+	scroll-margin-top: calc(var(--wcppp-bar-top) + 76px);
+}
+
+.wcppp-app .wcppp-doc h2 + *,
+.wcppp-app .wcppp-doc h3 + *,
+.wcppp-app .wcppp-doc h4 + * {
+	margin-top: 8px;
+}
+
+.wcppp-app .wcppp-doc p,
+.wcppp-app .wcppp-doc li {
+	font-size: 16px;
+	line-height: 1.7;
+}
+
+.wcppp-app .wcppp-doc ul {
+	margin-bottom: 0;
+	margin-left: 0;
+	padding-left: 24px;
+	list-style: disc;
+}
+
+.wcppp-app .wcppp-doc li {
+	margin: 0 0 6px;
+}
+
+.wcppp-app .wcppp-doc li > ul,
+.wcppp-app .wcppp-doc li > ol {
+	margin: 6px 0 0;
+}
+
+/* Numbered steps. */
+.wcppp-app .wcppp-doc > ol {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 0;
+	margin-left: 0;
+	padding: 0;
+	list-style: none;
+	counter-reset: wcppp-doc-step;
+}
+
+.wcppp-app .wcppp-doc > ol > li {
+	position: relative;
+	margin: 0;
+	padding: 12px 16px 12px 56px;
+	border: 1px solid var(--wcppp-line-2);
+	border-radius: var(--wcppp-radius);
+	background: var(--wcppp-surface-2);
+	counter-increment: wcppp-doc-step;
+}
+
+.wcppp-app .wcppp-doc > ol > li::before {
+	content: counter(wcppp-doc-step);
+	position: absolute;
+	top: 12px;
+	left: 14px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: var(--wcppp-radius-sm);
+	background: var(--wcppp-accent);
+	color: #fff;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1;
+}
+
+/* "Before you start": what to have ready, as a box. */
+.wcppp-app .wcppp-doc h2#before-you-start + ul {
+	padding: 14px 18px 14px 44px;
+	border: 1px solid var(--wcppp-line);
+	border-left: 4px solid var(--wcppp-accent);
+	border-radius: var(--wcppp-radius);
+	list-style: none;
+}
+
+.wcppp-app .wcppp-doc h2#before-you-start + ul > li {
+	position: relative;
+}
+
+.wcppp-app .wcppp-doc h2#before-you-start + ul > li::before {
+	content: "";
+	position: absolute;
+	top: 6px;
+	left: -26px;
+	width: 14px;
+	height: 14px;
+	border: 2px solid var(--wcppp-control);
+	border-radius: var(--wcppp-radius-xs);
+}
+
+.wcppp-app .wcppp-doc .wcppp-callout,
+.wcppp-app .wcppp-doc blockquote {
+	margin-left: 0;
+	margin-right: 0;
+	padding: 12px 16px;
+	border: 1px solid var(--wcppp-line);
+	border-left-width: 4px;
+	border-radius: var(--wcppp-radius);
+	background: var(--wcppp-surface-2);
+}
+
+.wcppp-app .wcppp-doc .wcppp-callout.is-ok {
+	border-color: var(--wcppp-ok-line);
+	border-left-color: var(--wcppp-ok);
+	background: var(--wcppp-ok-soft);
+}
+
+.wcppp-app .wcppp-doc .wcppp-callout.is-ok strong:first-child {
+	color: var(--wcppp-ok);
+}
+
+.wcppp-app .wcppp-doc blockquote > * + * {
+	margin-top: 8px;
+}
+
+.wcppp-app .wcppp-doc :not(pre) > code {
+	font-size: 14px;
+	overflow-wrap: break-word;
+}
+
+.wcppp-app .wcppp-code {
+	max-width: 100%;
+	padding: 14px 16px;
+	overflow-x: auto;
+	border-radius: var(--wcppp-radius);
+	background: #1d2327;
+	color: #f0f0f1;
+	font-size: 13px;
+	line-height: 1.6;
+}
+
+.wcppp-app .wcppp-code code {
+	padding: 0;
+	background: none;
+	color: inherit;
+	font-size: 13px;
+	white-space: pre;
+}
+
+.wcppp-app .wcppp-doc .wcppp-doc-table {
+	border: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-app .wcppp-doc .wcppp-doc-table th {
+	white-space: normal;
+}
+
+.wcppp-app .wcppp-doc .wcppp-doc-table td,
+.wcppp-app .wcppp-doc .wcppp-doc-table th {
+	font-size: 14px;
+	line-height: 1.55;
+}
+
+.wcppp-docpager {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+	margin-top: 36px;
+	padding-top: 20px;
+	border-top: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-docpager a {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 12px 16px;
+	border: 1px solid var(--wcppp-line);
+	border-radius: var(--wcppp-radius);
+	color: var(--wcppp-accent);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.wcppp-docpager a:hover {
+	border-color: var(--wcppp-accent);
+}
+
+.wcppp-docpager a.is-next {
+	grid-column: 2;
+	text-align: right;
+}
+
+.wcppp-docpager small {
+	color: var(--wcppp-text-2);
+	font-size: 12px;
+	font-weight: 400;
+}
+
+.wcppp-app .wcppp-docresults {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.wcppp-docresults li {
+	margin: 0;
+}
+
+.wcppp-docresults a {
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.wcppp-docresults p {
+	margin-top: 2px !important;
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-docresults mark {
+	padding: 0 2px;
+	background: var(--wcppp-warn-soft);
+	color: inherit;
+	box-shadow: inset 0 -2px 0 var(--wcppp-warn-line);
+}
+
+/* What's new. */
+.wcppp-release + .wcppp-release {
+	margin-top: 20px;
+	padding-top: 16px;
+	border-top: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-release h3 {
+	margin: 0 0 8px;
+	font-size: 16px;
+}
+
+.wcppp-app .wcppp-release ul {
+	margin: 0 0 4px;
+	padding: 0;
+	list-style: none;
+}
+
+.wcppp-release li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 6px 8px;
+	margin: 0;
+	padding: 4px 0;
+}
+
+.wcppp-release li > span:last-child {
+	flex: 1 1 280px;
+	min-width: 0;
+	/* Older notes name long functions and filters; let them wrap on a phone. */
+	overflow-wrap: anywhere;
+}
+
+.wcppp-whats-new .wcppp-card-body > p:last-child {
+	margin-top: 16px;
+}
+
+/* ------------------------------------------------------ Protected Content */
+
+.wcppp-pc-filters {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	padding: 16px 20px;
+	border-bottom: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-pc-search {
+	flex: 0 1 320px;
+	min-width: 0;
+}
+
+.wcppp-app .wcppp-pc-filters .wcppp-select {
+	min-width: 0;
+}
+
+.wcppp-pc-count {
+	margin: 0;
+	color: var(--wcppp-text-2);
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+}
+
+.wcppp-pc .wcppp-card-body {
+	padding: 4px 8px;
+}
+
+.wcppp-app .wcppp-pc-table td {
+	padding-top: 12px;
+	padding-bottom: 12px;
+	vertical-align: middle;
+}
+
+.wcppp-app .wcppp-pc-table tbody tr.wcppp-pc-row:last-of-type td,
+.wcppp-app .wcppp-pc-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.wcppp-pc-meta {
+	display: block;
+	margin-top: 2px;
+}
+
+.wcppp-pc-meta a {
+	color: inherit;
+}
+
+.wcppp-app .wcppp-pc-table tr.wcppp-pc-buyers-row > td {
+	padding: 0 12px 16px;
+	background: var(--wcppp-surface);
+}
+
+.wcppp-pc-buyers {
+	padding: 14px 16px;
+	border: 1px solid var(--wcppp-line-2);
+	border-radius: var(--wcppp-radius);
+	background: var(--wcppp-surface-2);
+	color: var(--wcppp-text-2);
+}
+
+.wcppp-buyers-summary {
+	margin: 0;
+	color: var(--wcppp-text);
+}
+
+.wcppp-buyers .wcppp-help {
+	margin: 4px 0 10px;
+}
+
+.wcppp-app .wcppp-buyers-table td {
+	vertical-align: middle;
+}
+
+.wcppp-buyers-table td .wcppp-muted {
+	display: block;
+}
+
+.wcppp-buyers-actions {
+	text-align: right;
+}
+
+.wcppp-buyers-actions form {
+	margin: 0;
+}
+
+.wcppp-buyers-orders {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 16px;
+	margin: 10px 0 0;
+	font-size: 13px;
+}
+
+.wcppp-pager {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 6px;
+	padding: 12px 20px 16px;
+	border-top: 1px solid var(--wcppp-line-2);
+}
+
+.wcppp-pager-label {
+	padding: 0 6px;
+	color: var(--wcppp-text-2);
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+}
+
+.wcppp-col-id {
+	width: 48px;
+}
+
+.wcppp-strong-link {
+	font-weight: 600;
+	color: var(--wcppp-text) !important;
+	text-decoration: none;
+}
+
+.wcppp-strong-link:hover {
+	color: var(--wcppp-accent) !important;
+	text-decoration: underline;
+}
+
+.wcppp-tag {
+	display: inline-block;
+	margin: 2px 4px 2px 0;
+	padding: 1px 8px;
+	border: 1px solid var(--wcppp-line);
+	border-radius: var(--wcppp-radius-xs);
+	background: var(--wcppp-surface-2);
+	color: var(--wcppp-text) !important;
+	font-size: 12px;
+	text-decoration: none;
+}
+
+.wcppp-tag:hover {
+	border-color: var(--wcppp-accent);
+}
+
+.wcppp-pc-more {
+	display: inline;
+}
+
+.wcppp-pc-more > summary {
+	display: inline-block;
+	margin: 2px 0;
+	padding: 1px 8px;
+	color: var(--wcppp-accent);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	list-style: none;
+}
+
+.wcppp-pc-more > summary::-webkit-details-marker {
+	display: none;
+}
+
+.wcppp-pc-more[open] > summary {
+	display: none;
+}
+
+.wcppp-tag.is-missing {
+	border-style: dashed;
+	color: var(--wcppp-text-3) !important;
+}
+
+/* -------------------------------------------------------------- responsive */
+
+@media (max-width: 1280px) {
+	.wcppp-docs.has-toc {
+		grid-template-columns: 240px minmax(0, 1fr);
+	}
+
+	.wcppp-doctoc {
+		display: none;
+	}
+
+	.wcppp-site-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.wcppp-site-grid > div:nth-child(4n) {
+		border-right: 1px solid var(--wcppp-line-2);
+	}
+
+	.wcppp-site-grid > div:nth-child(2n),
+	.wcppp-site-grid > div:last-child {
+		border-right: 0;
+	}
+
+	.wcppp-site-grid > div:last-child {
+		grid-column: auto;
+	}
+
+	.wcppp-site-grid > div:nth-child(odd):last-child {
+		grid-column: 1 / -1;
+	}
+}
+
+@media (max-width: 1180px) {
+	.wcppp-paywall-split,
+	.wcppp-help-grid,
+	.wcppp-tools-grid,
+	.wcppp-result-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.wcppp-result-checks {
+		border-right: 0;
+		border-bottom: 1px solid var(--wcppp-line-2);
+	}
+
+	.wcppp-checkform-fields {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	}
+
+	.wcppp-checkform-fields > .wcppp-btn {
+		justify-self: start;
+	}
+}
+
+@media (max-width: 960px) {
+	/* On a phone the docs home is the page list, and a page links back to it. */
+	.wcppp-docs,
+	.wcppp-docs.has-toc {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.wcppp-docnav {
+		position: static;
+		max-height: none;
+	}
+
+	.wcppp-docnav-links,
+	.wcppp-docs.has-page .wcppp-docnav {
+		display: none;
+	}
+
+	.wcppp-docback {
+		display: inline-block;
+		font-weight: 600;
+		text-decoration: none;
+	}
+
+	.wcppp-docpage {
+		padding: 20px;
+	}
+
+	.wcppp-tabs {
+		order: 3;
+		width: 100%;
+		margin: 0 -24px;
+		padding: 0 10px;
+		overflow-x: auto;
+		border-top: 1px solid var(--wcppp-line-2);
+	}
+
+	.wcppp-tabs a {
+		padding: 10px 14px 7px;
+		white-space: nowrap;
+	}
+
+	.wcppp-sectabs,
+	.wcppp-subnav {
+		flex-wrap: nowrap;
+		overflow-x: auto;
+	}
+
+	.wcppp-sectabs a,
+	.wcppp-subnav a {
+		white-space: nowrap;
+	}
+}
+
+@media (max-width: 782px) {
+	body.wcppp-app-screen {
+		--wcppp-bar-top: 46px;
+	}
+
+	.wcppp-head {
+		padding: 0 16px;
+	}
+
+	.wcppp-tabs {
+		margin: 0 -16px;
+	}
+
+	.wcppp-body {
+		padding: 16px;
+		gap: 16px;
+	}
+
+	.wcppp-app > .notice,
+	.wcppp-app > div.updated,
+	.wcppp-app > div.error {
+		margin: 12px 16px 0;
+	}
+
+	.wcppp-card-head,
+	.wcppp-pane-head,
+	.wcppp-app .wcppp-pane-sub,
+	.wcppp-row,
+	.wcppp-tool,
+	.wcppp-verdict,
+	.wcppp-result-checks,
+	.wcppp-result-orders,
+	.wcppp-checkform {
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+
+	.wcppp-card-body {
+		padding: 14px 16px 16px;
+	}
+
+	.wcppp-acc summary,
+	.wcppp-acc details > div {
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+
+	.wcppp-row {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+	}
+
+	.wcppp-app .wcppp-select,
+	.wcppp-app .wcppp-row-input {
+		min-width: 0;
+		width: 100%;
+	}
+
+	.wcppp-checkform-fields {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.wcppp-site-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.wcppp-site-grid > div,
+	.wcppp-site-grid > div:nth-child(4n) {
+		border-right: 0;
+	}
+
+	.wcppp-site-grid > div:last-child,
+	.wcppp-site-grid > div:nth-child(odd):last-child {
+		grid-column: auto;
+	}
+
+	.wcppp-kv > div {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0;
+	}
+
+	.wcppp-app .wcppp-doc h1 {
+		font-size: 24px;
+	}
+
+	.wcppp-docpager {
+		grid-template-columns: 1fr;
+	}
+
+	.wcppp-docpager a.is-next {
+		grid-column: auto;
+	}
+
+	.wcppp-result .wcppp-table thead,
+	.wcppp-pc-table thead,
+	.wcppp-buyers-table thead {
+		display: none;
+	}
+
+	.wcppp-result .wcppp-table,
+	.wcppp-result .wcppp-table tbody,
+	.wcppp-result .wcppp-table tr,
+	.wcppp-result .wcppp-table td,
+	.wcppp-pc-table,
+	.wcppp-pc-table tbody,
+	.wcppp-pc-table tr,
+	.wcppp-pc-table td,
+	.wcppp-buyers-table,
+	.wcppp-buyers-table tbody,
+	.wcppp-buyers-table tr,
+	.wcppp-buyers-table td {
+		display: block;
+		width: 100%;
+	}
+
+	.wcppp-app .wcppp-result .wcppp-table tr,
+	.wcppp-app .wcppp-buyers-table tr {
+		padding: 8px 0;
+		border-bottom: 1px solid var(--wcppp-line-2);
+	}
+
+	.wcppp-app .wcppp-pc-table tr.wcppp-pc-row {
+		padding: 12px 0 8px;
+		border-top: 1px solid var(--wcppp-line-2);
+	}
+
+	.wcppp-app .wcppp-pc-table tbody tr.wcppp-pc-row:first-child {
+		border-top: 0;
+	}
+
+	.wcppp-app .wcppp-pc-table tr.wcppp-pc-buyers-row[hidden] {
+		display: none;
+	}
+
+	.wcppp-app .wcppp-result .wcppp-table td,
+	.wcppp-app .wcppp-pc-table td,
+	.wcppp-app .wcppp-buyers-table td {
+		padding: 3px 0;
+		border: 0;
+	}
+
+	.wcppp-result .wcppp-table td[data-label]::before,
+	.wcppp-pc-table td[data-label]:not(:first-child)::before,
+	.wcppp-buyers-table td[data-label]:not(:first-child)::before {
+		content: attr(data-label) ": ";
+		color: var(--wcppp-text-3);
+		font-size: 12px;
+	}
+
+	.wcppp-buyers-actions {
+		text-align: left;
+	}
+
+	.wcppp-pc-filters {
+		padding: 14px 16px;
+	}
+
+	.wcppp-pc-search,
+	.wcppp-pc-count {
+		flex: 1 1 100%;
+	}
+
+	.wcppp-pager {
+		justify-content: center;
+		padding: 12px 16px 16px;
+	}
+}
+
+@media (max-width: 600px) {
+	/* The admin bar stops being fixed here, so the header stops sticking. */
+	.wcppp-head {
+		position: static;
+	}
+
+	.wcppp-plan {
+		margin-bottom: 10px;
+	}
+
+	.wcppp-inline,
+	.wcppp-docsearch {
+		flex-direction: column;
+	}
+
+	.wcppp-savebar {
+		padding: 12px 16px;
+	}
+
+	.wcppp-savebar .wcppp-grow {
+		display: none;
+	}
+
+	.wcppp-savebar .wcppp-btn.is-primary {
+		flex: 1;
+	}
+
+	.wcppp-tokens th,
+	.wcppp-tokens td {
+		display: block;
+		padding: 2px 0;
+		border: 0;
+	}
+
+	.wcppp-tokens tr {
+		display: block;
+		padding: 8px 0;
+		border-top: 1px solid var(--wcppp-line-2);
+	}
+
+	.wcppp-tokens .wcppp-tokens-action {
+		text-align: left;
+	}
+}

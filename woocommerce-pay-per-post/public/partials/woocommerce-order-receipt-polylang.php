@@ -9,15 +9,15 @@
 /** @noinspection PhpUndefinedFunctionInspection */
 $current_language = pll_default_language();
 ?>
-<div class="ppp-purchased-content"><strong><?php apply_filters( 'wc_pay_per_post_purchased_content_title', esc_html__( 'Access Your Purchased Content', 'wc_pay_per_post' ) ); ?></strong><br>
+<div class="ppp-purchased-content"><strong><?php echo apply_filters( 'wc_pay_per_post_purchased_content_title', Woocommerce_Pay_Per_Post_Helper::setting_text( 'order_links_heading', esc_html__( 'Access Your Purchased Content', 'wc_pay_per_post' ) ) ); ?></strong><br>
 	<ul class="ppp-purchased-content__list">
 
 		<?php foreach ( $purchased as $post ) : /** @noinspection PhpUndefinedFunctionInspection */
 			$languages = pll_get_post_translations($post['post_id']); ?>
             <li>
                 <strong><a href="<?php echo esc_url( get_permalink( $languages[$current_language] ) ); ?>">[<?php echo $current_language; ?>] <?php echo esc_html( get_the_title($languages[$current_language]) ); ?></a></strong><br>
-				<?php if($languages > 1): ?>
-					<?php apply_filters( 'wc_pay_per_post_languages_title', esc_html__( 'Additional Languages', 'wc_pay_per_post' ) ) ?>
+				<?php if ( count( (array) $languages ) > 1 ) : ?>
+					<?php echo esc_html( apply_filters( 'wc_pay_per_post_languages_title', __( 'Additional Languages', 'wc_pay_per_post' ) ) ); ?>
                     <ul>
 						<?php foreach($languages as $language => $post_id): if($language === $current_language): continue; endif; ?>
                             <li><a href="<?php echo esc_url( get_permalink( $post_id ) ); ?>">[<?php echo $language; ?>] <?php echo esc_html( get_the_title($post_id) ); ?></a></li>

@@ -18,106 +18,6 @@
     padding-left:40px;
 }
 
-/*noinspection CssUnusedSymbol*/
-#post-body ul.wcppp-tab-bar {
-    float: left;
-    width: 120px;
-    text-align: right;
-    /* Negative margin for the sake of those without JS: all tabs display */
-    margin: 0 -120px 0 5px;
-    padding: 0;
-}
-
-#post-body ul.wcppp-tab-bar li {
-    padding: 8px;
-}
-
-#post-body ul.wcppp-tab-bar li.wcppp-tab-active {
-    -webkit-border-top-left-radius: 3px;
-    -webkit-border-bottom-left-radius: 3px;
-    -webkit-border-top-right-radius: 0;
-    border-top-left-radius: 3px;
-    border-bottom-left-radius: 3px;
-    border-top-right-radius: 0;
-}
-
-/*noinspection CssUnusedSymbol*/
-div.wcppp-tab-panel-active {
-    display:block;
-}
-
-/*noinspection CssUnusedSymbol*/
-div.wcppp-tab-panel-inactive {
-    display:none;
-}
-
-/*noinspection CssUnusedSymbol*/
-#post-body div.wcppp-tab-panel {
-    margin: 0 5px 0 225px;
-}
-
-.has-right-sidebar #side-sortables .wcppp-tab-bar li {
-    display: inline;
-    line-height: 1.35em;
-}
-
-.no-js #side-sortables .wcppp-tab-bar li.hide-if-no-js {
-    display: none;
-}
-
-#side-sortables .wcppp-tab-bar a {
-    text-decoration: none;
-}
-
-/*noinspection CssUnusedSymbol*/
-#side-sortables .wcppp-tab-bar {
-    margin: 8px 0 3px;
-}
-
-/*noinspection CssUnusedSymbol*/
-#side-sortables .wcppp-tab-bar {
-    margin-bottom: 3px;
-}
-
-#post-body .wcppp-tab-bar li.wcppp-tab-active {
-    border-style: solid none solid solid;
-    border-width: 1px 0 1px 1px;
-    margin-right: -1px;
-    border-color: #ccc;
-    background-color: #efefef;
-}
-
-/*noinspection CssUnusedSymbol*/
-#post-body ul.wcppp-tab-bar {
-    float: left;
-    width: 190px;
-    text-align: right;
-    margin: 0 -120px 0 5px;
-    padding: 0;
-}
-
-#post-body ul.wcppp-tab-bar li {
-    padding: 8px;
-    display: block;
-}
-
-#post-body ul.wcppp-tab-bar li a {
-    text-decoration: underline;
-}
-
-/*noinspection CssUnusedSymbol*/
-#post-body div.wcppp-tab-panel {
-    margin: 0 5px 0 195px;
-    min-height: 200px;
-    padding-left: 30px;
-    max-height: none;
-}
-
-#post-body ul.wcppp-tab-bar li.wcppp-tab-active a {
-    font-weight: bold;
-    text-decoration: none;
-}
-
 .wc-ppp-upgrade {
     background: #fff;
     border-left: 4px solid #dc3232;
@@ -231,107 +131,458 @@ table.dataTable tbody tr.odd {
 	border: 1px dashed red;
 }
 
-.ppp-inner-panel h2.components-panel__body-title{
-	margin-left: 6px;
-}
-
-.ppp-inner-panel.components-panel__body.is-opened > .components-panel__body-title{
-	margin: -16px -16px 5px -10px;
-}
-
-.ppp-control {
-    background: #eef0f2;
-    padding: 10px 10px 10px;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #666;
-    border-top: 1px solid #ccc;
-    border-right: 1px solid #ccc;
-    border-left: 1px solid #ccc;
-
-}
-
-.ppp-control-title{
-	margin-bottom: 10px;
-}
-
-.ppp-control-title, .ppp-control .components-toggle-control__label{
-	color: #4a4949;
-	font-weight: 600;
-}
-
-.ppp-control-description{
-  margin-bottom: 15px;
-	margin-top: calc(8px);
-	font-size: 12px;
-	font-style: normal;
-	color: rgb(117, 117, 117);
-}
-
-#wc_pay_per_post_meta_box .postbox-header{
-	display: none;
-}
-
-.ppp-control-wrapper{
-    margin-top:20px;
-}
-
-.ppp_interval_control{
-	display: flex;
-}
-
-.ppp_interval_control div{
-	flex: unset;
-}
-
-.ppp_interval_control_data{
-	width: 40%;
-}
-
-.ppp_interval_control_unit{
-	width: 60%;
-}
-
-.ppp-options-container{
-	margin-top: 15px;
-}
-
-.ppp-plugin-sidebar button{
-	display: flex;
-	flex-direction: row-reverse;
-	justify-content: flex-end;
-}
-
-.ppp-plugin-sidebar button .dashicon{
-	margin: 0 10px 0 0;
-}
-
 .my-account-shortcode-container {
     border-bottom:3px solid #666;
     margin-bottom:20px;
 }
-.ppp-upgrade {
-    opacity: 0.65;
-    text-align: center;
-}
-.ppp-upgrade h3 {
-    font-size:16px;
-    margin:20px 0 0 0;
-    padding:0;
-}
-
-.ppp-upgrade .button,
-.ppp-upgrade .button:hover{
-    background-color:#000;
-    color:#fff;
-    border:none;
-}
-
-.ppp-upgrade .button:hover {
-    background-color:#0a3c4b;
-
-}
-
 .about-wrap .notice, .about-wrap div.error, .about-wrap div.updated {
     display: block!important;
     z-index: 1;
+}
+
+/*
+ * The Pay For Post box in the post editor (admin/partials/meta-box-base.php)
+ * and the block editor sidebar panel. WordPress's greys, the plugin's teal for
+ * the chosen protection type, violet only for Premium.
+ */
+.wcppp-mb,
+.ppp-panel {
+	--wcppp-accent: #0b6577;
+	--wcppp-premium: #5b21b6;
+	--wcppp-premium-soft: #f5f3ff;
+	--wcppp-premium-line: #c4b5fd;
+}
+
+.wcppp-mb {
+	margin: -6px -12px -12px;
+	color: #1d2327;
+}
+
+.wcppp-mb [hidden] {
+	display: none !important;
+}
+
+.wcppp-mb-status {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 14px;
+	padding: 12px 16px;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.wcppp-mb-status a {
+	font-weight: 600;
+}
+
+.wcppp-mb-summary {
+	flex: 1 1 300px;
+	color: #3c434a;
+}
+
+.wcppp-mb-badge {
+	display: inline-block;
+	padding: 1px 8px;
+	border: 1px solid #c3c4c7;
+	border-radius: 2px;
+	background: #f6f7f7;
+	color: #50575e;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.wcppp-mb-badge.is-on {
+	border-color: #68de7c;
+	background: #edfaef;
+	color: #00611c;
+}
+
+.wcppp-mb-section {
+	margin: 0;
+	padding: 16px;
+	border: 0;
+	border-bottom: 1px solid #dcdcde;
+	min-width: 0;
+}
+
+.wcppp-mb-section:last-child {
+	border-bottom: 0;
+}
+
+.wcppp-mb-label {
+	display: block;
+	float: left;
+	width: 100%;
+	margin: 0 0 6px;
+	padding: 0;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.wcppp-mb-label + * {
+	clear: both;
+}
+
+.wcppp-mb-help {
+	margin: 6px 0;
+	color: #50575e;
+}
+
+.wcppp-mb .select2-container {
+	max-width: 100%;
+}
+
+.wcppp-mb .select2-container--default .select2-selection--multiple {
+	min-height: 36px;
+	border-color: #8c8f94;
+	border-radius: 3px;
+}
+
+.wcppp-mb .select2-container--default .select2-selection--multiple .select2-selection__choice {
+	border-color: #dcdcde;
+	border-radius: 2px;
+	background: #f0f0f1;
+}
+
+.wcppp-mb-types {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+	gap: 10px;
+}
+
+.wcppp-mb-type {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 11px 13px;
+	border: 1px solid #c3c4c7;
+	border-radius: 3px;
+	background: #fff;
+	cursor: pointer;
+}
+
+.wcppp-mb-type:has(input:checked) {
+	padding: 10px 12px;
+	border: 2px solid var(--wcppp-accent);
+}
+
+.wcppp-mb-type:has(input:focus-visible) {
+	outline: 2px solid var(--wcppp-accent);
+	outline-offset: 2px;
+}
+
+.wcppp-mb-type input[type="radio"],
+.wcppp-mb-choice input[type="radio"],
+.wcppp-mb-check input[type="checkbox"] {
+	margin: 0;
+	accent-color: var(--wcppp-accent);
+}
+
+/* wp-admin draws its own radio dot, in the admin colour scheme's blue. */
+.wcppp-mb input[type="radio"]:checked {
+	border-color: var(--wcppp-accent);
+}
+
+.wcppp-mb input[type="radio"]:checked::before {
+	background-color: var(--wcppp-accent);
+}
+
+.wcppp-mb-type-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.wcppp-mb-type-desc {
+	color: #50575e;
+	font-size: 13px;
+}
+
+.wcppp-mb-type.is-locked,
+.wcppp-mb-choice.is-locked {
+	cursor: default;
+}
+
+.wcppp-mb-type.is-locked {
+	background: #f6f7f7;
+	border-color: #dcdcde;
+}
+
+.wcppp-mb-type.is-locked strong,
+.wcppp-mb-choice.is-locked strong {
+	color: #50575e;
+}
+
+.wcppp-mb-type.is-locked .wcppp-mb-type-desc {
+	color: #646970;
+}
+
+.wcppp-mb-premium {
+	display: inline-block;
+	padding: 0 7px;
+	border: 1px solid var(--wcppp-premium-line);
+	border-radius: 2px;
+	background: var(--wcppp-premium-soft);
+	color: var(--wcppp-premium);
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.6;
+	text-decoration: none;
+}
+
+a.wcppp-mb-premium:hover,
+a.wcppp-mb-premium:focus {
+	background: var(--wcppp-premium);
+	border-color: var(--wcppp-premium);
+	color: #fff;
+}
+
+.wcppp-mb-note {
+	margin: 12px 0 0;
+	padding: 10px 14px;
+	border: 1px solid var(--wcppp-premium-line);
+	border-radius: 4px;
+	background: var(--wcppp-premium-soft);
+}
+
+.wcppp-mb-note a {
+	color: var(--wcppp-premium);
+	font-weight: 600;
+}
+
+.wcppp-mb-paused {
+	margin: 12px 0 0;
+	padding: 10px 14px;
+	border-left: 4px solid #dba617;
+	background: #fcf9e8;
+}
+
+.wcppp-mb-settings {
+	margin-top: 12px;
+	padding: 12px 14px;
+	border-radius: 3px;
+	background: #f6f7f7;
+}
+
+.wcppp-mb-sentence {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	margin: 0;
+}
+
+.wcppp-mb-sentence + .wcppp-mb-check,
+.wcppp-mb-check + .wcppp-mb-sentence {
+	margin-top: 10px;
+}
+
+.wcppp-mb-sentence input[type="number"] {
+	width: 72px;
+}
+
+.wcppp-mb-check,
+.wcppp-mb-choice {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	cursor: pointer;
+}
+
+.wcppp-mb-check input,
+.wcppp-mb-choice input {
+	margin-top: 2px !important;
+}
+
+.wcppp-mb-remaining {
+	margin-top: 14px;
+}
+
+.wcppp-mb-remaining .wcppp-mb-help {
+	display: block;
+	margin: 2px 0 0;
+}
+
+.wcppp-mb-choice + .wcppp-mb-choice {
+	margin-top: 8px;
+}
+
+.wcppp-mb-message {
+	margin-top: 12px;
+}
+
+.wcppp-mb-tokens {
+	width: 100%;
+	margin-top: 10px;
+	border-collapse: collapse;
+}
+
+.wcppp-mb-tokens td {
+	padding: 5px 8px 5px 0;
+	border-top: 1px solid #f0f0f1;
+	vertical-align: top;
+}
+
+.wcppp-mb-tokens td:first-child {
+	white-space: nowrap;
+}
+
+.wcppp-mb-tokens td:last-child {
+	text-align: right;
+}
+
+/* The block editor sidebar panel. */
+.ppp-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.ppp-panel-status {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+}
+
+.ppp-panel-links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 14px;
+}
+
+.ppp-panel-heading {
+	margin: 0 0 8px;
+	padding: 0;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.4;
+	text-transform: uppercase;
+}
+
+.ppp-panel fieldset {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	min-width: 0;
+}
+
+.ppp-panel-help {
+	margin: 4px 0 0;
+	color: #757575;
+	font-size: 12px;
+}
+
+.ppp-panel-options {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.ppp-panel-option {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	cursor: pointer;
+}
+
+.ppp-panel-option input {
+	flex: 0 0 auto;
+	margin: 2px 0 0;
+}
+
+.ppp-panel-option > span {
+	display: flex;
+	flex-direction: column;
+}
+
+.ppp-panel-option.is-locked {
+	cursor: default;
+}
+
+.ppp-panel-option.is-locked strong {
+	color: #757575;
+}
+
+.ppp-panel-option-title {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.ppp-panel-settings {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 12px;
+	border-radius: 2px;
+	background: #f0f0f0;
+}
+
+.ppp-panel-amount {
+	display: flex;
+	align-items: flex-end;
+	gap: 6px;
+}
+
+.ppp-panel-amount > :first-child {
+	flex: 0 0 80px;
+}
+
+.ppp-panel-amount > :last-child {
+	flex: 1;
+}
+
+.ppp-panel .components-base-control {
+	margin-bottom: 0;
+}
+
+.ppp-panel .wcppp-mb-note,
+.ppp-panel .wcppp-mb-paused {
+	margin: 0;
+	padding: 10px 12px;
+}
+
+.ppp-panel-message {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 10px 12px;
+	border: 1px solid #e0e0e0;
+	border-radius: 2px;
+}
+
+.ppp-panel-message-text {
+	max-height: 4.5em;
+	overflow: hidden;
+	color: #1e1e1e;
+}
+
+.ppp-message-modal {
+	width: min(720px, calc(100vw - 32px));
+}
+
+.ppp-message-modal textarea {
+	width: 100%;
+	min-height: 200px;
+	font-family: Menlo, Consolas, monospace;
+	font-size: 13px;
+}
+
+.ppp-message-tokens {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	gap: 6px 12px;
+	align-items: center;
+	margin: 12px 0 0;
+}
+
+.ppp-message-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 20px;
 }

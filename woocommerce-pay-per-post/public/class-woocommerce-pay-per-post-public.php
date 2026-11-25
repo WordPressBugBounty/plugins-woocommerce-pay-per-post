@@ -51,10 +51,11 @@ class Woocommerce_Pay_Per_Post_Public {
         $is_protected = isset( $product_ids['product_ids'] ) && is_array( $product_ids['product_ids'] ) && count( $product_ids['product_ids'] ) > 0 && !empty( $product_ids['product_ids'][0] );
         if ( $turn_off_comments_completely_to_everyone_on_protected_posts && $is_protected ) {
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Public/should_disable_comments() $turn_off_comments_completely_to_everyone_on_protected_posts is TRUE' );
+            // Named callbacks, so the Premium branch below can lift them for
+            // customers with access. Kept on with Premium's option too, so
+            // comments close again if the licence lapses.
             add_filter( 'comments_open', '__return_false' );
-            add_filter( 'get_comments_number', function () {
-                return 0;
-            } );
+            add_filter( 'get_comments_number', '__return_zero' );
         } else {
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Public/should_disable_comments() $turn_off_comments_completely_to_everyone_on_protected_posts is FALSE' );
         }
@@ -104,8 +105,11 @@ class Woocommerce_Pay_Per_Post_Public {
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Public/restrict_content() - skipping - Is not protected.' );
             return $unfiltered_content;
         }
-        //check and see if inline shortcode exists, if it does skip
-        if ( strpos( get_the_content(), '[/wc-pay-for-post-inline]' ) ) {
+        // A post with an inline region is left to the inline shortcode, which
+        // protects the region and shows the rest. Only when that shortcode will
+        // run: otherwise the region is unprotected, so the post falls back to
+        // the full-post paywall.
+        if ( Woocommerce_Pay_Per_Post_Shortcodes::is_inline_shortcode_available() && false !== strpos( get_the_content(), '[/wc-pay-for-post-inline]' ) ) {
             Woocommerce_Pay_Per_Post_Helper::logger( 'Post ID: ' . $post_id . ' - Woocommerce_Pay_Per_Post_Public/restrict_content() - skipping - Inline Shortcode Present' );
             // Handle shortcode access
             return $unfiltered_content;

@@ -2,20 +2,21 @@
 Contributors: mattpramschufer, freemius
 Tags: woocommerce, payforpost, pay for post, sell content,
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mattpram%40gmail%2ecom
-Requires at least: 3.8
+Requires at least: 6.6
 Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 3.3.0
+Stable tag: 3.4.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Sell Pages/Posts through WooCommerce 2.6+ quickly and easily. Tested up to WooCommerce Version 11.2.x
+Sell Pages/Posts through WooCommerce 6.9+ quickly and easily. Tested up to WooCommerce Version 11.3.x
 
 == Description ==
 Quickly and easily sell access to pages, posts and custom post types through WooCommerce with Pay For Post with WooCommerce.  I originally created this plugin because I looked everywhere, and I couldn't find a plugin already out there, free or premium, that would do the simple fact of selling access to a particular page or post through WooCommerce.  So I decided to write my own.
 
 = Requirements =
-* WooCommerce version 2.6+ to be installed and active
+* WordPress 6.6+
+* WooCommerce version 6.9+ to be installed and active
 * **Guest checkout to be turned OFF**
 * PHP 7.4+ is required
 
@@ -143,7 +144,45 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 
 == Changelog ==
 
-=3.3.0=
+= 3.4.0 =
+* CHANGE - Redesigned admin screens: Settings, Protected Content (Premium) and Need Help. Getting Started, Documentation, What's New, Debug (now Check a customer) and Tools (now Status and tools) are in Need Help, and links to the old pages open the new place. Settings are unchanged and need no re-saving.
+* CHANGE - Requires WordPress 6.6 or later and WooCommerce 6.9 or later. Sites below these versions keep the version they have, and WordPress will not offer them this update.
+* CHANGE - Settings has a tab per section (Paywall, Access, Customers, Editor, Integrations, Advanced), an On checkbox beside each yes-or-no setting, one Save for every tab, one choice for who can comment on protected posts, a paywall token table with Insert buttons, and a list of detected integrations. Choosing Customers with access for comments (Premium) keeps them closed to everyone if the licence lapses.
+* CHANGE - The Access Diagnostic, now Need Help > Check a customer, leads with the answer, then each check in the order the paywall runs them, marking the ones that kept the customer out, beside their orders. Status and tools shows versions, guest checkout and debug log status, and the maintenance tools.
+* CHANGE (PREMIUM) - The Protected Content screen loads a page at a time and lists a post's buyers when asked, so it opens quickly on large stores. Search by title, filter by post type, and check a buyer's access from the list. Links to a post's buyers from earlier versions still work.
+* CHANGE - The Pay For Post box in the post editor is one screen instead of five tabs, and the block editor panel has the same layout: whether the post is protected and what a visitor gets, links to preview its paywall and check a customer, the products that unlock it, the protection type (Buy once, Free at first, Limited views or Time limited) with its settings, and the paywall message. Choosing the default message and saving deletes the post's own message. In the block editor the post's own message is written in the panel. Posts' settings are unchanged.
+* CHANGE - On the free plan, the post editor box shows Premium protection types and the per-post message locked, with a link to the plans, instead of advertising images. A post set to a Premium type, or with its own paywall message, says so.
+* CHANGE - Protected Content and Check a customer name a post's protection type as the post editor does: Buy once, Free at first, Limited views or Time limited.
+* CHANGE - Clearer settings help. "Delete all Pay For Post data" applies when the plugin is deleted, not deactivated, and removes every post's protection as well as the settings.
+* CHANGE - The debug log has a new file name. A log left by an earlier version is deleted when you update.
+* CHANGE - Tested with WordPress 7.1 and WooCommerce 11.3.
+* NEW - The full documentation is now in the plugin, under Pay For Post > Need Help > Docs, with search, links between pages and a list of each page's sections. It matches the version you have installed.
+* NEW - Need Help opens on a Start view: check a customer's access, search the docs, or copy your status report and contact support.
+* NEW - While WooCommerce guest checkout is on, Settings and Need Help say so in red, with a link to turn it off: guests have no account, so their purchase unlocks nothing.
+* NEW - Turn off and delete: while the debug log is on, Need Help offers to turn logging off and delete the log in one click.
+* NEW - The debug log has its own view under Need Help, shown while logging is on or a log is left, with Copy, Delete and Turn off and delete.
+* NEW - On the free plan, Premium badges in Settings link to the plans.
+* NEW - The Access Diagnostic names the order behind the answer. An order waiting for payment, cancelled or refunded is named with its status in the reason, and Open order goes straight to it.
+* NEW - Paywall preview on the settings page: see a post's paywall with the message as you have it, before saving.
+* NEW - Who can set protection, under Settings > Editor: show the Pay For Post panel only to the roles you choose. Someone outside them cannot change a post's protection.
+* NEW (PREMIUM) - Settings for things that needed code before: where purchased content links on orders appear and their heading, the My Account tab's name and headings, roles that skip the paywall, where the views or time remaining box goes, whether an expiry post reloads when access runs out, and turning the WooCommerce Subscriptions integration off. Code using the matching filters keeps working and overrides the setting.
+* NEW (PREMIUM) - {{memberships}} token for the restricted content message. On a page protected by a membership it places a Paid Memberships Pro checkout link for each level, or a members-only notice when the membership cannot be bought. The wc_pay_per_post_paywall_membership_offer filter changes or removes them.
+* NEW (PREMIUM) - The Access Diagnostic warns when a page cannot be bought because it is protected only by memberships that nothing sells.
+* NEW (PREMIUM) - wc_pay_per_post_can_use_paid_memberships_pro filter, to turn the Paid Memberships Pro integration off.
+* BUG FIX - Saving a post in the classic editor no longer removes its products. Products whose IDs an import or other code had stored as numbers showed as not selected, so saving the post, even to fix a typo, removed them and left the post free to read. Both editors now also keep a product, plan or level they cannot list, such as an unpublished product or a plan whose plugin is switched off. It shows as "not available" and stays on the post until you remove it.
+* BUG FIX - Saving a post no longer gives its protection to another post that a different plugin updates during the same save.
+* BUG FIX - The link for deleting the debug log did nothing. Delete it from Need Help, Debug log.
+* BUG FIX (PREMIUM) - Posts protected by a WooCommerce Memberships plan or a Paid Memberships Pro level now show a way to get access instead of an empty product block: the plan's products (with a link to any the product list cannot show, such as a variation or a hidden product), a link to the level's checkout, or a members-only notice with a login link.
+* BUG FIX (PREMIUM) - The block editor's Pay For Post panel now lists WooCommerce Memberships plans and Paid Memberships Pro levels, as the classic editor does. It listed products only, so a post protected by a plan or level lost it the first time anything was changed in the panel.
+* BUG FIX (PREMIUM) - Buyer lists on the Protected Content screen now include orders on stores using High-Performance Order Storage.
+* BUG FIX (PREMIUM) - Polylang support can be turned on from the settings page, and saving the settings while Polylang is deactivated no longer turns it off.
+* BUG FIX (PREMIUM) - Leaving the purchased content links out of order emails works again on WooCommerce's current email template, and the order link filters work from a theme's functions.php.
+* BUG FIX (PREMIUM) - With Polylang support on, the headings above the purchased content links on orders and above each post's other languages were missing.
+* BUG FIX (PREMIUM) - Customers with access now see a protected post's comments when comments are open only to them. Their comment count read 0, so many themes hid the comments.
+* BUG FIX (PREMIUM) - No more "Non-canonical cast (boolean) is deprecated" warnings on PHP 8.5.
+* SECURITY - Security hardening.
+
+= 3.3.0 =
 * SECURITY - General security hardening.
 * BUG FIX - Fixed a block editor save removing a post's protection. A post protected in the classic editor, through the meta box with Block Editor Integration off, by an import, or before the block editor sidebar existed lost all its products, and so became free to read, the first time it was saved in the block editor, even if only the title changed. A post whose sidebar settings were left over from an earlier edit went back to those settings instead. Sidebar settings are now applied only when they were changed.
 * BUG FIX - The block editor sidebar now shows a post's products as selected when an import or other code stored their IDs as numbers. They appeared unselected, and the next change made in the sidebar removed them.
@@ -162,7 +201,7 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 * NEW - wc_pay_per_post_shortcode_posts filter. Receives the list a [woocommerce-payperpost] template is about to render, already filtered and sorted, plus the template and the shortcode attributes.
 * ENHANCEMENT (PREMIUM) - orderby="title" on the [woocommerce-payperpost] shortcode now sorts titles naturally, so "Lesson 2" comes before "Lesson 10".
 
-=3.2.35=
+= 3.2.35 =
 * SECURITY - General security hardening.
 * BUG FIX - Fixed a fatal error on the free version for any post configured with Delay, Page View or Expiry protection, typically settings left over from a premium licence that has since lapsed. Because the check runs through the_content, one such post took down every archive page listing it, for every visitor. Those posts now fall back to standard protection: still locked, purchase still required. The delay window, page-view allowance and expiry are simply not applied. Settings are untouched and resume if a licence is reactivated. An admin notice reports how many posts are affected.
 * BUG FIX - The block editor bundle was served with no version number and no declared dependencies, so a browser or CDN holding an older copy had no reason to fetch an updated one, and editor packages could load in the wrong order. Both now come from the build manifest.
@@ -181,7 +220,7 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 * UPDATE (PREMIUM) - Tested with Elementor 4.3.4 and Elementor Pro 4.3.1
 * KNOWN LIMITATION (PREMIUM) - WooCommerce Subscriptions 9.0+ can sell any product on a subscription plan, and its classic Simple/Variable subscription product types are off by default on new stores. Pay For Post recognises subscriptions by the classic product types only. A product sold through a subscription plan still unlocks the page, but its subscription status is not checked, so cancelling does not remove access. Stores using the classic product types are unaffected. Subscription plan support is planned for the next release.
 
-=3.2.34=
+= 3.2.34 =
 * BUG FIX (PREMIUM) - Fixed expire protection reloading a page over and over. The countdown that ends timed access on an open page was scheduled even when the expiry had already passed while the visitor could still see the content, so the page reloaded roughly once a second. Timed access that is genuinely still running is unaffected and still ends on the page the visitor is on.
 * BUG FIX - Fixed the debug log reporting the opposite of the access decision it had just made, which made access issues much harder to diagnose. The access decision itself was always correct.
 * ENHANCEMENT - The access check is now performed once per request instead of twice, removing duplicate database queries on every protected page.
@@ -195,10 +234,10 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 * UPDATE - Tested up to WooCommerce 10.9.4
 * UPDATE (PREMIUM) - Tested with Elementor and Elementor Pro 4.2.0
 
-=3.2.33=
+= 3.2.33 =
 * BUG FIX - Fixed fatal error when using the purchased content shortcode on free version of the plugin.
 
-=3.2.32=
+= 3.2.32 =
 * SECURITY - Hardened against XSS attacks.
 * BUG FIX (PREMIUM) - Fixed issue where canceled WooCommerce Subscriptions sometimes still granted access to protected content.
 * BUG FIX (PREMIUM) - Fixed My Account "Purchased Content" endpoint displaying blank page when shortcode display options were saved with no selections. The endpoint now defaults to showing both "has access" and "purchased" sections when no specific selections are made, preventing empty display. Also improved admin settings UI to clarify default behavior.
@@ -209,59 +248,59 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 * UPDATE - Tested up to WooCommerce 10.4.3
 * UPDATE (PREMIUM) - Tested with Elementor 3.34.0
 
-=3.2.31=
+= 3.2.31 =
 * SECURITY - Hardened against XSS attacks
 * UPDATE - Updated Symfony polyfill packages to v1.33.0
 * UPDATE - Updated Freemius SDK to v2.13.0
 * BUG FIX - Fixed issue where on rare occasions the check for active WooSubscription subscriptions would fail.
 
-=3.2.30=
+= 3.2.30 =
 * UPDATE - Updated all third-party libraries.
 * FIX - Fixed _load_textdomain_just_in_time notice
 
-=3.2.29=
+= 3.2.29 =
 * UPDATE - Reverted custom function of customer_has_purchased_product() and conditionalized it to only be used on WC 9.6.0 and 9.6.1 and to use the native wc_customer_bought_product() otherwise, now that WC has fixed the bug in 9.6
 
-=3.2.28=
+= 3.2.28 =
 * UPDATE - Updated all 3rd party vendor libraries
 * UPDATE - Added custom function for wc_customer_bought_product() since that function is broke in WooCommerce version 9.6, 9.6.1, and 9.7.0-pre-release
 
-=3.2.27=
+= 3.2.27 =
 * BUGFIX - Fixed fatal error on some Elementor integrations.
 
-=3.2.26=
+= 3.2.26 =
 * UPDATE - Added additional parameters when creating transients to account for missing attributes.
 * UPDATE - Updated all third-party libraries
 
-=3.2.25=
+= 3.2.25 =
 *UPDATE - Added in new filter for wc_pay_per_post_enable_pageview_fix which when protected pages view page view protection and setting amount to 1 causes issues on some installs.
 
-=3.2.24=
+= 3.2.24 =
 * UPDATE - Added in a filter to disable the last_purchase_date on shortcodes which is an expensive operation. wc_pay_per_post_enable_last_purchase_date
 * FEATURE - WooMemberships, WooSubscriptions and PaidMembershipPro now work with Elementor integration.
 * UPDATE - Updated Freemius Library
 
 
-=3.2.23=
+= 3.2.23 =
 * BUGFIX - Fixed issue with Remaining shortcode not outputting results when used inside of Elementor page.
 * UPDATE - Updated to latest Freemius library
 * FEATURE - Added the filter wc_pay_per_post_shortcode_remaining_no_posts for changing the text when there is no posts remaining to be purchased.
 * FEATURE - Added new helper function get_last_purchase_date by post ID.  Can be used to sort purchased products by date of last purchase on the Purchased shortcode template.
 
-=3.2.22=
+= 3.2.22 =
 * Feature - Added in tools menus
 * UPDATE - Updated all third party libries
 
-=3.1.21=
+= 3.1.21 =
 * BUGFIX - Corrected issue if you have homepage set to display latest posts with full content, posts would not be protected until you click on them.  This has been fixed.
 * BUGFIX - Corrected issue with improperly identifying membership products.
 * UPDATE - Added more support for AVADA page builder.
 
-=3.1.20=
+= 3.1.20 =
 * BUGFIX - Fixed issue with inline shortcode not working correctly on some installations.
 
 
-=3.1.19=
+= 3.1.19 =
 * ROLLBACK - Rolled back refactoring of protection checks as it introduced more issues than it corrected
 * UPDATE - Compatibility with new WooCommerce High-Performance Order Storage (HOPS) was added.
 * UPDATE - A feature was added to append body classes to protected posts along with information about whether users have access to a set post or not.
@@ -869,6 +908,9 @@ Yes, I do the absolute best I can to support the free version of the plugin.  If
 * Initial Release
 
 == Upgrade Notice ==
+
+= 3.4.0 =
+Requires WordPress 6.6 and WooCommerce 6.9. Redesigned admin screens; settings are unchanged. In the post editor, choosing the default paywall message and saving deletes the post's own message. Security hardening.
 
 = 3.3.0 =
 Security hardening, and a fix for block editor saves that could remove a post's protection: check protected posts you have saved in the block editor, as protection already lost is not restored. Premium: customers whose WooCommerce Subscriptions plan subscription has lapsed now lose access.
